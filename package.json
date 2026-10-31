@@ -1,0 +1,28 @@
+{
+  "name": "mc-launcher",
+  "version": "2.0.0",
+  "description": "星兔启动器",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.xingtu.launcher",
+    "productName": "星兔启动器",
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "星兔启动器.exe"
+    }
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "minecraft-launcher-core": "^3.18.2"
+  },
+  "devDependencies": {
+    "electron": "^24.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

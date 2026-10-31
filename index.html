@@ -1,0 +1,2386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<title>星兔启动器</title>
+<style>
+  .clock-display{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80px;font-weight:100;color:rgba(0,0,0,0.06);z-index:0;pointer-events:none;user-select:none;font-family:Consolas,monospace;letter-spacing:5px}
+  body.night .clock-display{color:rgba(255,255,255,0.08)}
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--accent:#3498db;--accent2:#2980b9;--glow:rgba(52,152,219,0.35);--bg1:#f0f4f8;--bg2:#d9e2ec;--panel:rgba(255,255,255,0.85);--text:#1a202c;--text-dim:#718096;--border:#e2e8f0}
+body.night{--bg1:#0f1115;--bg2:#1a1d24;--panel:rgba(20,23,30,0.9);--text:#e8e8e8;--text-dim:#888;--border:rgba(255,255,255,0.08)}
+body{font-family:"Microsoft YaHei",sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:all 0.5s}
+.splash{position:fixed;inset:0;background:radial-gradient(circle,#1a1a3e,#0a0a1a);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:splashFade .6s ease 2s forwards}
+@keyframes splashFade{to{opacity:0;visibility:hidden}}
+.splash-logo{font-size:64px;animation:bounceIn .8s cubic-bezier(.34,1.56,.64,1)}
+.splash-ring{position:absolute;width:120px;height:120px;border:2px solid var(--accent);border-radius:50%;opacity:0;animation:ringPulse 1.5s infinite}
+.splash-ring:nth-child(2){animation-delay:.5s}
+@keyframes ringPulse{0%{transform:scale(.8);opacity:.6}100%{transform:scale(1.8);opacity:0}}
+.splash-title{margin-top:20px;font-size:28px;font-weight:700;background:linear-gradient(90deg,var(--accent),#fff,var(--accent));background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 2s linear infinite}
+.splash-sub{margin-top:8px;font-size:12px;color:rgba(255,255,255,.3)}
+.splash-bar{margin-top:30px;width:200px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.splash-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:loadBar 1.8s ease forwards}
+@keyframes loadBar{to{width:100%}}
+@keyframes bounceIn{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes shimmer{to{background-position:200% center}}
+.main-wrap{flex:1;display:flex;overflow:hidden}
+.sidebar{width:180px;background:var(--panel);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;border-right:1px solid rgba(255,255,255,.05)}
+.sidebar .logo{padding:0 20px 20px;font-size:18px;font-weight:700;color:var(--accent);border-bottom:1px solid rgba(255,255,255,.05);margin-bottom:10px}
+.nav-item{padding:12px 20px;cursor:pointer;color:var(--text-dim);font-size:14px;transition:.2s;border-left:3px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(128,128,128,.08)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(128,128,128,.08)}
+.sidebar .author{margin-top:auto;padding:15px 20px;color:var(--text-dim);font-size:11px;opacity:.5}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.page{display:none;flex:1;flex-direction:column;overflow:hidden}
+.page.active{display:flex}
+.home-main{flex:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.home-main::-webkit-scrollbar{width:6px}
+.home-main::-webkit-scrollbar-track{background:transparent}
+.home-main::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+.avatar-row{display:flex;align-items:center;gap:12px}
+.avatar-box{width:50px;height:50px;border-radius:50%;overflow:hidden;cursor:pointer;border:2px solid var(--accent);background:#333;flex-shrink:0}
+.avatar-box canvas{width:100%;height:100%;image-rendering:pixelated}
+.avatar-username{font-size:15px;color:#ccc}
+.auth-tabs{display:flex;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.1)}
+.auth-tab{padding:10px 28px;font-size:14px;background:rgba(255,255,255,.04);color:#888;cursor:pointer;transition:.2s}
+.auth-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600}
+.auth-fields{display:none;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.auth-fields.active{display:flex;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.text-input{padding:10px 14px;font-size:13px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;outline:none;width:180px}
+.text-input:focus{border-color:var(--accent)}
+.text-input::placeholder{color:#555}
+.pwd-wrap{position:relative;display:flex;align-items:center}
+.pwd-wrap .text-input{padding-right:36px}
+.pwd-toggle{position:absolute;right:8px;cursor:pointer;font-size:16px;opacity:.6;padding:4px}
+.pwd-toggle:hover{opacity:1}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.version-select{width:180px;padding:11px 14px;font-size:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#ccc;outline:none;cursor:pointer}
+.version-select option{background:#16213e;color:#ccc}
+.small-btn{padding:11px 12px;font-size:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#aaa;cursor:pointer}
+.small-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+.refresh-btn{padding:11px 12px;font-size:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#aaa;cursor:pointer}
+.refresh-btn.spinning{animation:spin .8s linear infinite}
+.ver-tab{padding:5px 14px;font-size:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#888;cursor:pointer}
+.ver-tab:hover{background:rgba(255,255,255,.12);color:#ccc}
+.ver-tab.active{background:var(--accent,#2ecc71);border-color:var(--accent,#2ecc71);color:#fff}
+.login-btn{padding:10px 20px;font-size:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600}
+.launch-btn{width:420px;padding:18px;font-size:20px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:12px;color:#fff;cursor:pointer;transition:.15s;letter-spacing:2px;box-shadow:0 4px 20px var(--glow)}
+.launch-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--glow)}
+.launch-btn:active{transform:translateY(0)}
+.launch-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.status{color:#888;font-size:13px;min-height:20px;text-align:center}
+.account-badge{font-size:12px;color:var(--accent)}
+.progress-wrap{width:400px;display:none;margin:0 auto}
+.progress-wrap.active{display:block}
+.progress-bar-bg{width:100%;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.progress-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:.3s}
+.progress-text{text-align:center;font-size:11px;color:#666;margin-top:5px}
+.log-box{width:100%;max-width:600px;margin:0 auto;height:80px;min-height:40px;background:rgba(0,0,0,.25);border-radius:8px;padding:10px;font-size:11px;font-family:Consolas,monospace;color:var(--accent);overflow-y:auto;resize:vertical;user-select:text}
+.log-box::-webkit-scrollbar{width:6px}
+.repo-page,.music-page,.settings-page,.news-page,.mm-page{padding:25px 30px;overflow-y:auto;flex:1}
+.repo-page h2,.music-page h2,.settings-page h2,.news-page h2,.mm-page h2{font-size:20px;margin-bottom:15px}
+.music-toolbar{display:flex;gap:10px;margin-bottom:15px;align-items:center}
+.repo-search-bar{display:flex;gap:10px;margin-bottom:15px;align-items:center}
+.repo-search-bar input{flex:1;padding:10px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;outline:none}
+.repo-search-bar select{padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#ccc}
+.mod-card{display:flex;gap:12px;padding:12px;margin-bottom:8px;background:rgba(255,255,255,.04);border-radius:10px}
+.mod-card img{width:48px;height:48px;border-radius:8px;background:rgba(255,255,255,.1)}
+.mod-card-info{flex:1}
+.mod-card-info h4{font-size:14px;margin-bottom:4px}
+.mod-card-info p{font-size:11px;color:#888}
+.mod-card button{padding:6px 16px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;color:#fff;cursor:pointer;align-self:center}
+.repo-tip{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:#facc15;margin-bottom:15px}
+.music-list{display:flex;flex-direction:column;gap:6px}
+.music-item-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,.04);border-radius:10px;cursor:pointer}
+.music-item-row.current{background:rgba(255,255,255,.08);border-left:3px solid var(--accent)}
+.music-item-row .idx{width:24px;font-size:12px;color:#666;text-align:center}
+.music-item-row .name{flex:1;font-size:14px;color:#ccc}
+.music-item-row.current .name{color:var(--accent)}
+.setting-group{margin-bottom:22px}
+.setting-group>label{display:block;font-size:13px;color:#888;margin-bottom:8px}
+.setting-row{display:flex;gap:10px;align-items:center}
+.dir-display{flex:1;padding:10px 14px;font-size:12px;background:rgba(0,0,0,.2);border-radius:8px;color:#666;word-break:break-all}
+.memory-slider{flex:1;-webkit-appearance:none;height:6px;background:rgba(255,255,255,.1);border-radius:3px;outline:none}
+.memory-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer}
+.memory-val{font-size:14px;color:var(--accent);min-width:60px}
+.theme-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.theme-dot{width:40px;height:40px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.theme-dot.selected{border-color:#fff}
+.custom-picker-wrap{display:flex;align-items:center;gap:8px}
+.custom-picker-wrap input[type=color]{width:40px;height:40px;border:none;border-radius:50%;cursor:pointer;background:none}
+.save-btn{padding:10px 30px;font-size:14px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;cursor:pointer;margin-top:10px}
+.news-card{background:rgba(255,255,255,.04);border-radius:12px;padding:20px;margin-bottom:12px;border-left:3px solid var(--accent)}
+.news-card .news-date{font-size:11px;color:#666;margin-bottom:6px}
+.news-card .news-title{font-size:16px;font-weight:600;margin-bottom:8px;color:var(--accent)}
+.news-card .news-content{font-size:13px;color:#aaa;line-height:1.8}
+.news-card .news-content ul{padding-left:20px;margin-top:6px}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast-container{position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:10px}
+.toast{padding:12px 20px;border-radius:10px;font-size:13px;background:rgba(30,30,50,.95);border:1px solid rgba(255,255,255,.1);color:#fff;display:flex;gap:8px;animation:toastIn .3s ease;max-width:340px}
+.toast.success{border-left:3px solid #4ecca3}
+.toast.error{border-left:3px solid #ef4444}
+.toast.info{border-left:3px solid #38bdf8}
+.toast.warning{border-left:3px solid #facc15}
+.toast.out{animation:toastOut .3s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateX(40px)}}
+.music-bar{height:48px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0}
+.music-bar .music-icon{font-size:18px}
+.music-bar .music-controls{display:flex;gap:6px}
+.music-bar .music-controls button{width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:#ccc;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.music-bar .music-controls button:hover{background:var(--accent);color:#fff}
+.music-bar .music-info{flex:1;min-width:0}
+.music-bar .music-title{font-size:12px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-bar .music-progress{width:100%;height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:4px;cursor:pointer}
+.music-bar .music-progress-fill{height:100%;width:0;background:var(--accent)}
+.speed-btn{padding:4px 10px;font-size:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#aaa;cursor:pointer;min-width:44px;text-align:center}
+.speed-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.vol-slider{width:70px;-webkit-appearance:none;height:4px;background:rgba(255,255,255,.15);border-radius:2px}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--accent);border-radius:50%;cursor:pointer}
+.mm-tabs{display:flex;gap:8px;margin-bottom:15px}
+.mm-tab{padding:8px 20px;background:rgba(255,255,255,.06);border-radius:8px;cursor:pointer;font-size:14px}
+.mm-tab.active{background:var(--accent);color:#fff}
+.mm-toolbar{display:flex;gap:10px;margin-bottom:15px;align-items:center;flex-wrap:wrap}
+.mm-toolbar input{flex:1;min-width:200px;padding:9px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;outline:none}
+.mm-toolbar select{padding:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#ccc}
+.mm-item{display:flex;gap:12px;padding:14px;margin-bottom:8px;background:rgba(255,255,255,.04);border-radius:10px;align-items:center}
+.mm-item.disabled{opacity:.5;border:1px dashed #666}
+.mm-item-info{flex:1}
+.mm-item-info h4{font-size:14px;margin-bottom:4px}
+.mm-item-info p{font-size:11px;color:#888;line-height:1.5}
+.mm-badge{font-size:10px;padding:2px 8px;border-radius:4px;margin-right:4px}
+.mm-badge.fabric{background:#6c5ce7;color:#fff}
+.mm-badge.forge{background:#d63031;color:#fff}
+.mm-badge.on{background:#00b894;color:#fff}
+.mm-badge.off{background:#636e72;color:#fff}
+.skin-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:none;align-items:center;justify-content:center}
+.skin-modal.open{display:flex}
+.skin-modal-box{background:#1e1e3a;border-radius:14px;padding:25px;width:320px;text-align:center}
+.skin-modal-box h3{margin-bottom:15px;font-size:16px}
+.skin-preview{width:120px;height:120px;margin:0 auto 15px;background:#2a2a4a;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.skin-preview canvas{width:96px;height:96px;image-rendering:pixelated}
+.skin-btns{display:flex;gap:8px;justify-content:center}
+.skin-btns button{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px}
+.skin-btns .pick{background:var(--accent);color:#fff}
+.skin-btns .clear{background:#444;color:#aaa}
+.skin-btns .close{background:#555;color:#ccc}
+/* ===== 3D 皮肤预览 ===== */
+.skin3d{position:fixed;inset:0;background:linear-gradient(160deg,#14181f 0%,#1a1d24 60%,#1c212c 100%);z-index:2000;display:none;flex-direction:column}
+.skin3d.open{display:flex}
+.skin3d-stage{position:absolute;inset:0}
+.skin3d canvas{display:block}
+.skin3d-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:12px 16px;background:rgba(16,20,26,.72);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.06);z-index:5;flex-wrap:wrap}
+.skin3d-top .t{font-weight:700;color:#eef2f7;font-size:15px;letter-spacing:.5px;white-space:nowrap}
+.skin3d-top .t b{color:#7aa5ff}
+.skin3d-top .sp{flex:1}
+.btn3d{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#cbd5e0;padding:8px 14px;border-radius:9px;font-size:13px;cursor:pointer;min-height:40px;transition:all .15s;white-space:nowrap}
+.btn3d:hover{background:rgba(255,255,255,.14)}
+.btn3d.active{background:rgba(122,165,255,.28);border-color:rgba(122,165,255,.6);color:#eaf2ff}
+.btn3d.close{background:rgba(255,90,90,.18);border-color:rgba(255,90,90,.4);color:#ffd9d9}
+.skin3d-hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);color:#9aa6b2;font-size:12px;background:rgba(16,20,26,.78);padding:8px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.08);white-space:nowrap;z-index:5;transition:opacity .3s}
+.skin3d.observing .skin3d-top,.skin3d.observing .skin3d-cape,.skin3d.observing .skin3d-hint{opacity:0;pointer-events:none}
+.skin3d.observing .skin3d-exit{display:flex}
+.skin3d-exit{display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:6;align-items:center;gap:8px;background:rgba(16,20,26,.6);color:#8a96a3;font-size:12px;padding:8px 16px;border-radius:20px;backdrop-filter:blur(6px);cursor:pointer;border:1px solid rgba(255,255,255,.1)}
+.skin3d-exit:hover{background:rgba(40,50,60,.8);color:#fff}
+.skin3d-cape{position:absolute;bottom:54px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;z-index:5;background:rgba(16,20,26,.8);padding:8px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.08);font-size:12px;color:#9aa6b2;backdrop-filter:blur(6px);flex-wrap:wrap;justify-content:center;white-space:nowrap}
+.skin3d-cape .lbl{color:#cbd5e0;font-weight:600}
+.skin3d-cape .cape-status{color:#7ad7c0}
+@media(max-width:640px){.skin3d-hint{width:92%;white-space:normal;text-align:center;line-height:1.5}.skin3d-cape{width:92%;white-space:normal}.skin3d-top .t{font-size:13px}.btn3d{font-size:12px;padding:7px 10px;min-height:38px}}
+/* 兔子吉祥物 */
+.rabbit{--pet-scale:1;position:fixed;right:20px;bottom:80px;z-index:999;cursor:grab;user-select:none;transition:transform .2s;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)) drop-shadow(0 0 4px rgba(255,150,200,.6));background:rgba(255,255,255,0.1);border-radius:20px;padding:5px}
+.rabbit:hover{transform:scale(calc(1.08*var(--pet-scale)))}
+.rabbit.dragging{cursor:grabbing;transform:scale(calc(1.12*var(--pet-scale)))}
+.rabbit svg{animation:rabbitBreathe 2.5s ease-in-out infinite;transform-origin:center bottom}
+@keyframes rabbitBreathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.03) scaleX(0.99)}}
+.rabbit.happy{animation:rabbitJump .5s ease}
+@keyframes rabbitJump{0%,100%{transform:translateY(0) scale(var(--pet-scale))}30%{transform:translateY(-15px) scale(calc(1.1*var(--pet-scale)))}60%{transform:translateY(0) scale(calc(0.95*var(--pet-scale)))}}
+.rabbit.eating{animation:rabbitEat .4s ease infinite}
+@keyframes rabbitEat{0%,100%{transform:scaleX(var(--pet-scale))}50%{transform:scaleX(calc(0.92*var(--pet-scale))) scaleY(calc(1.05*var(--pet-scale)))}}
+.rabbit-chat{position:fixed;z-index:501;background:#fff;color:#333;padding:10px 14px;border-radius:12px;font-size:13px;max-width:240px;box-shadow:0 4px 16px rgba(0,0,0,.25);display:none;line-height:1.6;transform-origin:bottom left}
+.rabbit-chat:after{content:'';position:absolute;bottom:-8px;left:20px;border:8px solid transparent;border-top-color:#fff;border-bottom:none}
+.rabbit-chat.show{display:block;animation:rabbitPop .35s cubic-bezier(.34,1.56,.64,1)}
+.rabbit-chat.hide{animation:rabbitFade .3s ease forwards}
+/* 表情包浮层：无背景，直接显示图片，层级在兔子之上 */
+.rabbit-emoji{position:fixed;z-index:1001;display:none;transform-origin:bottom center;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
+.rabbit-emoji.show{display:block;animation:rabbitPop .35s cubic-bezier(.34,1.56,.64,1)}
+.rabbit-emoji.hide{animation:rabbitFade .3s ease forwards}
+.rabbit-emoji img{max-width:140px;max-height:140px;display:block;border-radius:10px}
+@keyframes rabbitPop{0%{opacity:0;transform:scale(.3) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes rabbitFade{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.8) translateY(5px)}}
+.rabbit-food{position:fixed;z-index:502;display:none;gap:8px;background:rgba(0,0,0,.7);padding:8px;border-radius:10px}
+.rabbit-food.show{display:flex}
+.rabbit-food button{font-size:24px;background:none;border:none;cursor:pointer;padding:4px}
+.rabbit-food button:hover{transform:scale(1.2)}
+/* 换装菜单 */
+.rabbit-dress{position:fixed;z-index:502;display:none;gap:6px;background:rgba(0,0,0,.75);padding:8px;border-radius:10px;flex-wrap:wrap;max-width:200px}
+.rabbit-dress.show{display:flex}
+.rabbit-dress button{font-size:20px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;padding:4px 8px;color:#fff}
+.rabbit-dress button:hover{background:var(--accent)}
+.rabbit-dress button.active{background:var(--accent);border-color:var(--accent)}
+/* 换肤扩展 */
+.rabbit.drag-over{outline:2px dashed var(--accent);outline-offset:4px;transform:scale(1.15)}
+#rabbitSkinHost img{max-width:100%;max-height:100%;object-fit:contain;animation:rabbitBreathe 2.5s ease-in-out infinite;transform-origin:center bottom}
+#rabbitSkinHost .pet-model-card{width:65px;height:78px;border-radius:12px;background:linear-gradient(160deg,rgba(122,165,255,.25),rgba(255,158,181,.25));border:1px dashed rgba(255,255,255,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;color:#fff;text-align:center;line-height:1.1;padding:4px;box-sizing:border-box}
+#rabbitSkinHost .pet-model-card small{font-size:9px;color:#e0e0e0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.msgs-list{flex:1;overflow-y:auto;background:#0f1115;border-radius:8px;padding:10px;margin-bottom:10px}
+.msgs-list .msg-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,.04);margin-bottom:6px;color:#e0e0e0;font-size:13px}
+.msgs-list .msg-item:hover{background:rgba(46,204,113,.12)}
+.msgs-list .msg-item .del{margin-left:auto;cursor:pointer;color:#ef4444;font-size:16px;flex-shrink:0;padding:2px 6px;border-radius:4px}
+.msgs-list .msg-item .del:hover{background:rgba(239,68,68,.2)}
+.msgs-list .empty{color:#666;text-align:center;padding:20px;font-size:13px}
+.skin-option{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f1115;border-radius:8px;margin-bottom:8px;cursor:pointer;color:#e0e0e0;font-size:14px;border:1px solid transparent}
+.skin-option:hover{border-color:var(--accent);background:rgba(46,204,113,.08)}
+.skin-option .icon{font-size:22px}
+.skin-option small{color:#888;font-size:11px;margin-left:auto}
+/* 成就系统 */
+.ach-toast{position:fixed;top:80px;right:20px;z-index:9999;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a2e;padding:14px 20px;border-radius:12px;animation:achPop .5s cubic-bezier(.34,1.56,.64,1);box-shadow:0 6px 20px rgba(251,191,36,.4);display:flex;align-items:center;gap:12px}
+@keyframes achPop{0%{transform:translateX(100px) scale(.5);opacity:0}100%{transform:translateX(0) scale(1);opacity:1}}
+.ach-toast .ach-icon{font-size:32px}
+.ach-toast .ach-info h4{font-size:14px;margin-bottom:2px}
+.ach-toast .ach-info p{font-size:11px;opacity:.8}
+/* 日夜切换 */
+.daynight-btn{position:fixed;top:15px;right:15px;z-index:400;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.1);color:#fff;font-size:18px;cursor:pointer;transition:.3s}
+.daynight-btn:hover{background:rgba(255,255,255,.2)}
+.m-actions{display:flex;gap:6px;margin-left:auto}.m-btn{background:rgba(255,255,255,.08);border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px}.m-btn:hover{background:rgba(255,255,255,.2)}
+/* 简易/完整模式切换 */
+.mode-switch{position:fixed;top:15px;right:62px;z-index:400;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border-radius:20px;padding:5px 12px;color:#ccc;font-size:12px;cursor:pointer;user-select:none}
+.mode-switch:hover{background:rgba(255,255,255,.2)}
+.mode-switch .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+/* PCL 风格加载器行 */
+.pcl-row{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#16181d;border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid transparent;margin-bottom:6px}
+.pcl-row:hover{background:#1e2128;border-color:rgba(255,255,255,.05)}
+.pcl-row.open{background:#1e2128;border-color:rgba(52,152,219,.3)}
+.pcl-row.selected{background:rgba(52,152,219,.10);border-color:rgba(52,152,219,.4)}
+.pcl-row-left{display:flex;align-items:center;gap:10px}
+.pcl-row-name{font-weight:700;font-size:15px}
+.pcl-row-desc{color:#666;font-size:12px}
+.pcl-row-right{display:flex;align-items:center;gap:10px}
+.pcl-badge{color:#888;font-size:12px}
+.pcl-arrow{color:#888;font-size:18px;transition:transform .2s}
+.pcl-row.open .pcl-arrow{transform:rotate(90deg)}
+.pcl-list{display:none;padding:6px 14px;margin:4px 0;max-height:200px;overflow-y:auto;background:rgba(255,255,255,.03);border-radius:8px}
+.pcl-list.open{display:block}
+/* PCL 风格版本列表 */
+.pcl-verlist{transition:max-height .3s ease;overflow:hidden;max-height:600pxmax-height:360px;overflow-y:auto;margin-top:12px;background:#0f1115;border:1px solid rgba(255,255,255,.06);border-radius:10px;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.pcl-verlist::-webkit-scrollbar{width:6px}
+.pcl-verlist::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+.pcl-ver-row{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s;color:#d0d5dd;font-size:14px}
+.pcl-ver-row:hover{background:rgba(255,255,255,.05)}
+.pcl-ver-row.selected{background:rgba(52,152,219,.16)}
+.pcl-ver-row.selected .pv-name{color:var(--accent)}
+.pcl-ver-row:last-child{border-bottom:none}
+.pcl-ver-row .pv-name{font-weight:600}
+.pcl-ver-row .pv-tag{font-size:11px;color:#8b98a6;background:rgba(255,255,255,.06);padding:2px 9px;border-radius:10px;white-space:nowrap}
+.pcl-ver-row .pv-tag.installed{color:#2ecc71;background:rgba(46,204,113,.12)}
+.pcl-ver-row .pv-tag.snapshot{color:#e67e22;background:rgba(230,126,34,.12)}
+.pcl-ver-row .pv-tag.old{color:#9b59b6;background:rgba(155,89,182,.12)}
+.pcl-ver-row .pv-tag.event{color:#3498db;background:rgba(52,152,219,.12)}
+/* 简易模式：隐藏所有高级面板 */
+body.simple-ui .sidebar .nav-item:not([data-home]),
+body.simple-ui .log-box,
+body.simple-ui .rabbit,
+body.simple-ui .music-bar,
+body.simple-ui .clock-display{display:none !important}
+body.simple-ui .home-main{justify-content:center;gap:20px !important}
+body.simple-ui .launch-btn{width:420px;font-size:20px;padding:18px}
+/* Mod 仓库新增筛选行 */
+.repo-filter-row{display:flex;gap:10px;margin-bottom:15px;align-items:center;flex-wrap:wrap}
+.repo-filter-row select{padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#ccc}
+/* 预下载缓存按钮 */
+.preload-btn{width:100%;margin-top:8px;padding:10px;background:rgba(56,189,248,.15);border:1px dashed #38bdf8;border-radius:8px;color:#38bdf8;cursor:pointer;font-size:12px}
+.preload-btn:hover{background:rgba(56,189,248,.25)}
+.preload-btn:disabled{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+<video id="wpVideo" autoplay loop muted playsinline style="display:none;position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;pointer-events:none"></video>
+<div id="wpOverlay" style="display:none;position:fixed;inset:0;z-index:-1;pointer-events:none;background:rgba(20,25,35,.4)"></div>
+<div class="splash"><div class="splash-ring"></div><div class="splash-ring"></div><div class="splash-logo">🐰</div><div class="splash-title">星兔启动器</div><div class="splash-sub">STAR RABBIT LAUNCHER</div><div class="splash-bar"><div class="splash-bar-fill"></div></div></div>
+<button class="daynight-btn" id="daynightBtn" onclick="toggleDayNight()">🌙</button>
+<div class="mode-switch" id="modeSwitch" onclick="toggleMode()" title="切换简易/完整模式"><span class="dot"></span><span id="modeLabel">完整</span></div>
+<div class="toast-container" id="toastContainer"></div>
+<div id="achContainer"></div>
+<div class="clock-display" id="clockDisplay"></div>
+<canvas id="bgCanvas" style="position:fixed;inset:0;z-index:-1;pointer-events:none"></canvas>
+<div class="main-wrap">
+  <div class="sidebar">
+    <div class="logo">🐰 星兔启动器</div>
+    <div class="nav-item active" data-home onclick="showPage('home',this)">🏠 主页</div>
+    <div class="nav-item" onclick="showPage('news',this)">📢 公告</div>
+    <div class="nav-item" onclick="showPage('task',this)">📥 任务管理</div>
+    <div class="nav-item" onclick="showPage('mm',this)">🧩 Mod管理</div>
+    <div class="nav-item" onclick="showPage('repo',this)">🌐 Mod仓库</div>
+    <div class="nav-item" onclick="showPage('music',this)">🎵 音乐库</div>
+    <div class="nav-item" onclick="showPage('ach',this)">🏆 成就</div>
+    <div class="nav-item" onclick="showPage('help',this)">📖 使用指南</div>
+    <div class="nav-item" onclick="showPage('settings',this)">⚙️ 设置</div>
+    <div class="author">@W 制作</div>
+  </div>
+  <div class="content">
+    <div class="page active" id="page-home"><div class="home-main">
+      <div class="avatar-row"><div class="avatar-box" onclick="openSkinModal()"><canvas id="avatarCanvas" width="50" height="50"></canvas></div><div><div class="avatar-username" id="avatarName">Steve</div><div class="account-badge" id="accountBadge"></div></div></div>
+      <div class="auth-tabs"><div class="auth-tab active" data-auth="offline" onclick="setAuth('offline')">离线</div><div class="auth-tab" data-auth="yggdrasil" onclick="setAuth('yggdrasil')">外置登录</div><div class="auth-tab" data-auth="microsoft" onclick="setAuth('microsoft')">正版</div></div>
+      <div class="auth-fields active" id="fields-offline"><input class="text-input" id="offlineName" placeholder="输入游戏名字" maxlength="16"></div>
+      <div class="auth-fields" id="fields-yggdrasil"><input class="text-input" id="ygUrl" placeholder="服务器地址"><input class="text-input" id="ygUser" placeholder="用户名/邮箱"><div class="pwd-wrap"><input class="text-input" id="ygPass" type="password" placeholder="密码" style="width:150px"><span class="pwd-toggle" onclick="togglePwd()">👁</span></div><button class="login-btn" onclick="yggdrasilLogin()">登录</button></div>
+      <div class="auth-fields" id="fields-microsoft"><button class="login-btn" onclick="msLogin()">前往购买 Minecraft</button></div>
+      <div style="width:100%;max-width:480px">
+      <div class="ver-tabs" style="display:flex;gap:6px;margin-bottom:10px;justify-content:center">
+        <button class="ver-tab active" data-cat="release" onclick="setVerCat('release',this)">正式版</button>
+        <button class="ver-tab" data-cat="snapshot" onclick="setVerCat('snapshot',this)">预览版</button>
+        <button class="ver-tab" data-cat="old" onclick="setVerCat('old',this)">远古版</button>
+        <button class="ver-tab" data-cat="event" onclick="setVerCat('event',this)">活动版</button>
+      </div>
+      <div style="background:#16181d;border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid rgba(255,255,255,.05)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">🧱</span>
+          <div style="flex:1;font-size:15px;color:#e0e0e0;font-weight:600">选择版本</div>
+          <button class="refresh-btn" id="refreshBtn" onclick="refreshVersions()" title="刷新版本" style="cursor:pointer">🔄</button>
+          <button class="refresh-btn" id="collapseBtn" onclick="toggleVersionList()" title="收起/展开版本列表" style="cursor:pointer">📂</button>
+          <button class="refresh-btn" onclick="chooseDir()" title="选择下载位置" style="cursor:pointer">📁</button>
+          <button class="refresh-btn" onclick="uninstall()" title="卸载当前版本" style="cursor:pointer;color:#ef4444">🗑️</button>
+        </div>
+        <select id="versionSelect" style="display:none" onchange="onVersionPick()"><option>加载中...</option></select>
+        <div id="versionList" class="pcl-verlist" style="max-height:300px;overflow-y:auto;margin-top:10px"></div>
+      </div>
+      </div>
+      <div id="loaderCard" class="loader-card" style="display:none;background:#1a1d24;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)">
+        <!-- 顶部：返回 + 当前选择 -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <button onclick="backToVersionList()" style="background:none;border:1px solid #333;color:#888;font-size:18px;cursor:pointer;padding:6px 12px;border-radius:8px" onmouseover="this.style.background='#222'" onmouseout="this.style.background='none'">← 返回</button>
+          <div style="flex:1;padding:10px 14px;background:#0f1115;border:1px solid #333;border-radius:8px;font-size:16px;color:#e0e0e0;font-weight:600" id="currentVersionLabel">选版本</div>
+        </div>
+        <div style="color:#888;font-size:12px;margin-bottom:12px">选择要添加的 Mod 加载器（不选就是原版）</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div id="rowFabric" class="pcl-row" onclick="toggleLoader('fabric')">
+            <div class="pcl-row-left"><span class="pcl-row-name" style="color:#2ecc71">Fabric</span><span class="pcl-row-desc">轻量 Mod 加载器</span></div>
+            <span class="pcl-row-right"><span id="fabricBadge" class="pcl-badge">可以添加</span><span class="pcl-arrow">›</span></span>
+          </div>
+          <div id="fabricList" class="pcl-list"></div>
+          <div id="rowForge" class="pcl-row" onclick="toggleLoader('forge')">
+            <div class="pcl-row-left"><span class="pcl-row-name" style="color:#e67e22">Forge</span><span class="pcl-row-desc">经典 Mod 加载器</span></div>
+            <span class="pcl-row-right"><span id="forgeBadge" class="pcl-badge">可以添加</span><span class="pcl-arrow">›</span></span>
+          </div>
+          <div id="forgeList" class="pcl-list"></div>
+          <div id="rowNeoForge" class="pcl-row" onclick="toggleLoader('neoforge')">
+            <div class="pcl-row-left"><span class="pcl-row-name" style="color:#9b59b6">NeoForge</span><span class="pcl-row-desc">Forge 新一代分支</span></div>
+            <span class="pcl-row-right"><span id="neoforgeBadge" class="pcl-badge">可以添加</span><span class="pcl-arrow">›</span></span>
+          </div>
+          <div id="neoforgeList" class="pcl-list"></div>
+          <div id="rowOptiFine" class="pcl-row" onclick="toggleLoader('optifine')">
+            <div class="pcl-row-left"><span class="pcl-row-name" style="color:#3498db">OptiFine</span><span class="pcl-row-desc">高清修复优化</span></div>
+            <span class="pcl-row-right"><span id="optifineBadge" class="pcl-badge">可以添加</span><span class="pcl-arrow">›</span></span>
+          </div>
+          <div id="optifineList" class="pcl-list"></div>
+        </div>
+        <button id="startDownloadBtn" onclick="startDownloadSelected()" style="display:none;width:100%;margin-top:12px;padding:12px;background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">⬇ 开始下载</button>
+      </div>
+      </div>
+      <button class="launch-btn" id="launchBtn" onclick="launch()" style="cursor:pointer;display:block;margin:0 auto">启动游戏</button>
+      <div class="status" id="status">就绪</div>
+      <div class="progress-wrap" id="progressWrap"><div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div><div class="progress-text" id="progressText">下载中...</div><div style="text-align:center;margin-top:6px"><button class="small-btn" onclick="cancelDownload()" style="color:#ef4444">✕ 取消下载</button></div></div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+    <div class="page" id="page-news"><div class="news-page"><h2>📢 公告</h2>
+      <div class="news-card"><div class="news-date">2026-10-23 · v2.4</div><div class="news-title">🎉 兔子吉祥物 + 成就系统</div><div class="news-content"><ul><li>右下角有只兔子可以拖来拖去</li><li>点兔子喂胡萝卜🥕或白菜🥬</li><li>兔子会根据时间和你聊天</li><li>右上角日月按钮切换日夜</li><li>隐藏彩蛋等你发现</li></ul></div></div>
+    </div></div>
+    <div class="page" id="page-task"><div style="display:flex;flex:1;width:100%">
+      <div style="width:200px;padding:25px 20px;border-right:1px solid rgba(255,255,255,.05)">
+        <div style="color:#888;font-size:13px;margin-bottom:6px">总进度</div>
+        <div style="font-size:36px;font-weight:700;color:var(--accent)" id="taskTotalPct">0%</div>
+        <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin:12px 0;overflow:hidden"><div id="taskTotalBar" style="height:100%;width:0;background:var(--accent);transition:.3s"></div></div>
+        <div style="color:#888;font-size:13px;margin:16px 0 6px">下载速度</div>
+        <div style="font-size:22px;color:#ccc" id="taskSpeed">0 B/s</div>
+        <div style="color:#888;font-size:13px;margin:16px 0 6px">剩余文件</div>
+        <div style="font-size:22px;color:#ccc" id="taskRemaining">0</div>
+      </div>
+      <div style="flex:1;padding:25px;overflow-y:auto">
+        <div style="font-size:18px;font-weight:600;margin-bottom:15px" id="taskTitle">暂无任务</div>
+        <div id="taskSteps"></div>
+      </div>
+    </div></div>
+    <div class="page" id="page-mm"><div class="mm-page"><h2>🧩 Mod & 材质包管理</h2>
+      <div id="dropZone" style="border:2px dashed rgba(255,255,255,.15);border-radius:12px;padding:20px;text-align:center;color:#666;margin-bottom:12px;transition:all .2s" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="importModpack(event)">📦 拖入整合包（.mrpack / .zip）或 Mod（.jar）到这里</div>
+      <div class="mm-tabs"><div class="mm-tab active" onclick="mmSwitchTab('mod')">📦 Mod列表</div><div class="mm-tab" onclick="mmSwitchTab('rp')">🎨 材质包</div><div class="mm-tab" onclick="mmSwitchTab('shader')">✨ 光影包</div><div class="mm-tab" onclick="mmSwitchTab('datapack')">🗃️ 数据包</div></div>
+      <div class="mm-toolbar" id="mmToolbarMod"><input type="text" id="mmSearch" placeholder="🔍 搜索mod..." oninput="mmRender()"><select id="mmLoaderFilter" onchange="mmRender()"><option value="all">全部</option><option value="Fabric">Fabric</option><option value="Forge">Forge</option></select><select id="mmStatusFilter" onchange="mmRender()"><option value="all">全部</option><option value="on">启用</option><option value="off">禁用</option></select><button class="login-btn" onclick="mmImportMod()">➕ 导入</button><button class="small-btn" onclick="mmLoadMods()">🔄</button></div>
+      <div class="mm-toolbar" id="mmToolbarRp" style="display:none"><input type="text" id="mmSearchRp" placeholder="🔍 搜索材质包..." oninput="mmRenderRp()"><button class="login-btn" onclick="mmImportRp()">➕ 导入</button><button class="small-btn" onclick="mmLoadRp()">🔄</button></div>
+      <div class="mm-toolbar" id="mmToolbarShader" style="display:none"><input type="text" id="mmSearchShader" placeholder="🔍 搜索光影包..." oninput="mmRenderShader()"><button class="login-btn" onclick="mmImportShader()">➕ 导入</button><button class="small-btn" onclick="mmLoadShader()">🔄</button></div>
+      <div class="mm-toolbar" id="mmToolbarDatapack" style="display:none"><input type="text" id="mmSearchDatapack" placeholder="🔍 搜索数据包..." oninput="mmRenderDatapack()"><button class="login-btn" onclick="mmImportDatapack()">➕ 导入</button><button class="small-btn" onclick="mmLoadDatapack()">🔄</button></div>
+      <div id="mmModList"></div><div id="mmRpList" style="display:none"></div><div id="mmShaderList" style="display:none"></div><div id="mmDatapackList" style="display:none"></div>
+    </div></div>
+    <div class="page" id="page-repo"><div class="repo-page"><h2>🌐 Mod仓库</h2>
+      <div class="repo-tip">💡 先装Fabric/Forge，版本要和MC一致。</div>
+      <div class="repo-search-bar"><select id="repoType" onchange="document.getElementById('repoLoader').style.display=this.value==='mod'?'inline':'none'"><option value="mod">Mod</option><option value="modpack">整合包</option></select><input type="text" id="repoSearch" placeholder="搜索..." onkeydown="if(event.key==='Enter')searchRepo()"><select id="repoVersion"><option value="">全部版本</option></select><select id="repoLoader"><option value="">全部加载器</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="neoforge">NeoForge</option><option value="optifine">OptiFine</option></select><button class="login-btn" onclick="searchRepo()">搜索</button></div>
+      <div id="modResults"></div>
+    </div></div>
+    <div class="page" id="page-music"><div class="music-page"><h2>🎵 音乐库</h2>
+      <div class="music-toolbar">
+        <button class="login-btn" id="tabAll" onclick="switchMusicTab('all')">全部音乐</button>
+        <button class="login-btn" id="tabFav" onclick="switchMusicTab('fav')">❤️ 我的喜爱</button>
+        <button class="small-btn" onclick="refreshMusic()">🔄 扫描</button>
+        <button class="small-btn" onclick="addMusic()">➕ 添加</button>
+        <button class="small-btn" onclick="favoriteAll()">❤️ 全部喜爱</button>
+        <span style="font-size:12px;color:#666" id="musicCount"></span>
+      </div>
+      <div class="music-list" id="musicListPage"></div>
+    </div></div>
+    <div class="page" id="page-ach"><div class="music-page"><h2>🏆 成就</h2>
+      <div id="achList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div></div>
+    <div class="page" id="page-help"><div style="max-width:700px">
+      <h2>📖 使用指南</h2>
+      <div style="background:#1a1d24;border-radius:10px;padding:15px;margin:10px 0">
+        <h3 style="color:#2ecc71;margin-bottom:8px">🚀 启动游戏</h3>
+        <p style="color:#aaa;font-size:14px;line-height:1.8">① 选账号（外置登录填 LittleSkin）→ ② 选版本 → ③ 点「启动游戏」<br>第一次会下资源文件，等进度条走完</p>
+      </div>
+      <div style="background:#1a1d24;border-radius:10px;padding:15px;margin:10px 0">
+        <h3 style="color:#2ecc71;margin-bottom:8px">📦 加 Mod / 材质包 / 光影 / 数据包</h3>
+        <p style="color:#aaa;font-size:14px;line-height:1.8">① 左边点「Mod管理」→ ② 选对应标签页 → ③ 把文件<b style="color:#2ecc71">拖进虚线框</b><br>Mod 用 .jar，材质包/光影/数据车用 .zip</p>
+      </div>
+      <div style="background:#1a1d24;border-radius:10px;padding:15px;margin:10px 0">
+        <h3 style="color:#2ecc71;margin-bottom:8px">🌐 在线下载 Mod</h3>
+        <p style="color:#aaa;font-size:14px;line-height:1.8">左边点「Mod仓库」→ 搜名字 → 选 Mod/整合包 → 点下载自动安装</p>
+      </div>
+      <div style="background:#1a1d24;border-radius:10px;padding:15px;margin:10px 0">
+        <h3 style="color:#2ecc71;margin-bottom:8px">🎮 装 Fabric（Mod 加载器）</h3>
+        <p style="color:#aaa;font-size:14px;line-height:1.8">选原版版本（如 1.20.1）→ 点「装Fabric」→ 装完选 fabric 版本启动</p>
+      </div>
+      <div style="background:rgba(255,193,71,.1);border-left:3px solid #ffc147;border-radius:0 8px 8px 0;padding:12px 15px;margin:10px 0">
+        <p style="color:#ffc147;font-size:14px"><b>常见问题</b><br>
+        • 游戏是英文？→ Options → Language → 中文（简体）<br>
+        • 一直在下载？→ 第一次要下 3598 个资源，等它下完<br>
+        • Mod 不生效？→ 确认选的是 fabric 版本启动<br>
+        • 点 ❤️ 收藏的 Mod 会排最前面
+        </p>
+      </div>
+    </div></div>
+    <div class="page" id="page-settings"><div class="settings-page"><h2>⚙️ 设置</h2>
+      
+      <div class="setting-group"><label>最大内存</label><div class="setting-row"><input type="range" class="memory-slider" id="setMemory" min="512" max="4096" step="512" value="1024"><span class="memory-val" id="setMemoryVal">1024M</span></div></div>
+      <div class="setting-group"><label>游戏目录</label><div class="setting-row"><div class="dir-display" id="setDir">加载中...</div><button class="small-btn" onclick="chooseDir()">浏览</button></div></div>
+      <div class="setting-group"><label>主题颜色</label><div class="theme-row">
+        <div class="theme-dot" style="background:#4ecca3" data-theme="green" onclick="setTheme('green')"></div>
+        <div class="theme-dot" style="background:#a855f7" data-theme="purple" onclick="setTheme('purple')"></div>
+        <div class="theme-dot" style="background:#38bdf8" data-theme="blue" onclick="setTheme('blue')"></div>
+        <div class="theme-dot" style="background:#fb923c" data-theme="orange" onclick="setTheme('orange')"></div>
+        <div class="theme-dot" style="background:#ec4899" data-theme="pink" onclick="setTheme('pink')"></div>
+        <div class="theme-dot" style="background:#facc15" data-theme="gold" onclick="setTheme('gold')"></div>
+        <div class="theme-dot" style="background:#ef4444" data-theme="red" onclick="setTheme('red')"></div>
+        <div class="custom-picker-wrap"><input type="color" id="customColor" value="#4ecca3" oninput="setCustomColor(this.value)"><span style="font-size:12px;color:#666">自定义</span></div>
+      </div></div>
+      <div class="setting-group"><label>背景样式</label><div class="setting-row" style="gap:10px;flex-wrap:wrap">
+        <button class="small-btn" onclick="setBg('default')" id="bgDefault">默认渐变</button>
+        <button class="small-btn" onclick="setBg('stars')" id="bgStars">动态星空</button>
+        <button class="small-btn" onclick="setBg('custom')" id="bgCustom">静态图片壁纸</button>
+        <button class="small-btn" onclick="document.getElementById('wpVideoFile').click()">动态视频壁纸</button>
+        <button class="small-btn" onclick="clearWallpaper()">清除壁纸</button>
+        <input type="file" id="bgFile" accept="image/*" style="display:none" onchange="setCustomBg(this)">
+        <input type="file" id="wpVideoFile" accept="video/mp4,video/webm,image/gif" style="display:none" onchange="setVideoWallpaper(this)">
+      </div></div>
+      <div class="setting-group"><label>壁纸透明度</label><div class="setting-row"><input type="range" id="wpOp" min="0" max="100" value="40" oninput="wpApply()"><span id="wpOpVal">40%</span></div></div>
+      <div class="setting-group"><label>默认渐变方向</label><div class="setting-row" style="gap:6px;flex-wrap:wrap">
+        <button class="small-btn" onclick="setGradientDir('135deg')">↘ 左上→右下</button>
+        <button class="small-btn" onclick="setGradientDir('90deg')">→ 左→右</button>
+        <button class="small-btn" onclick="setGradientDir('0deg')">↑ 下→上</button>
+        <button class="small-btn" onclick="setGradientDir('to top right')">↗ 左下→右上</button>
+        <button class="small-btn" onclick="setGradientDir('to bottom')">↓ 上→下</button>
+        <button class="small-btn" onclick="setGradientDir('45deg')">↗ 左下→右上</button>
+      </div></div>
+      <div class="setting-group"><label>Java 路径</label><div class="setting-row"><input class="text-input" id="setJava" placeholder="自动检测，或手动选择javaw.exe" style="flex:1"><button class="small-btn" onclick="chooseJava()">浏览</button></div></div>
+      <div class="setting-group"><label>游戏窗口</label><div class="setting-row"><input class="text-input" id="setWidth" placeholder="宽" style="width:80px" value="854"><span style="color:#666">×</span><input class="text-input" id="setHeight" placeholder="高" style="width:80px" value="480"></div></div>
+      <div class="setting-group"><label>下载线程数（卡就调小）</label><div class="setting-row"><input type="range" id="setThreads" min="1" max="16" step="1" value="5" oninput="document.getElementById('threadsVal').textContent=this.value+'路'"><span class="memory-val" id="threadsVal">5路</span></div></div>
+      
+      <button class="save-btn" onclick="saveAllSettings()">保存设置</button>
+    </div></div>
+  </div>
+</div>
+<div class="skin-modal" id="skin-modal"><div class="skin-modal-box" style="max-width:420px"><h3>🎨 离线皮肤</h3><div style="background:rgba(255,193,71,.15);border-left:3px solid #ffc147;padding:10px;margin:10px 0;border-radius:6px;font-size:13px;color:#ffc147">⚠️ 由于技术问题，此功能只保证对 1.19.2 以前的版本有效！</div><div class="skin-preview"><canvas id="skinPreviewCanvas" width="96" height="96"></canvas></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0">
+<label style="cursor:pointer"><input type="radio" name="skinType" value="random" onchange="setSkinType('random')"> 随机</label>
+<label style="cursor:pointer"><input type="radio" name="skinType" value="steve" onchange="setSkinType('steve')"> Steve</label>
+<label style="cursor:pointer"><input type="radio" name="skinType" value="alex" onchange="setSkinType('alex')"> Alex</label>
+<label style="cursor:pointer"><input type="radio" name="skinType" value="custom" checked onchange="setSkinType('custom')"> 自定义</label>
+</div><div class="skin-btns"><button class="pick" onclick="pickSkin()">选择PNG皮肤</button><button class="clear" onclick="clearSkin()">重置皮肤</button><button class="pick" style="background:#7aa5ff" onclick="open3dSkin()">🧊 3D预览</button><button class="close" onclick="closeSkinModal()">关闭</button></div></div></div><input type="file" id="externalSkinFile" accept="image/png" style="display:none" onchange="onExternalSkinFile(event)">
+<div class="skin3d" id="skin3d"><div class="skin3d-stage" id="skin3dStage"></div><div class="skin3d-exit" onclick="exitObserve()">✕ 退出观察模式（ESC）</div><div class="skin3d-top"><div class="t">🧊 星兔<b>3D 皮肤预览</b></div><div class="sp"></div><span class="btn3d" id="skin3dRes" style="cursor:default;border-style:dashed">--</span><button class="btn3d active" id="m3Steve" onclick="set3dModel('steve')">Steve</button><button class="btn3d" id="m3Alex" onclick="set3dModel('alex')">Alex</button><button class="btn3d" id="actIdle" onclick="set3dAction(0)">🧍</button><button class="btn3d" id="actWalk" onclick="set3dAction(1)">🚶</button><button class="btn3d" id="auto3dBtn" onclick="toggle3dAuto()">⏸ 停止旋转</button><button class="btn3d" onclick="reset3dView()">⟲ 重置视角</button><button class="btn3d" style="background:rgba(239,68,68,.2)" onclick="resetAllSkin()">🗑️ 重置皮肤</button><button class="btn3d" style="background:rgba(122,165,255,.2)" onclick="enterObserve()">🔍 观察模式</button><button class="btn3d" style="background:rgba(46,204,113,.25)" onclick="saveAndClose()">💾 保存</button><button class="btn3d close" onclick="close3dSkin()">✕ 关闭</button></div><div class="skin3d-cape"><button class="btn3d" onclick="pickSkinFile()">选择皮肤PNG</button><button class="btn3d" onclick="loadSkinUrl()">皮肤URL</button><button class="btn3d" onclick="pickCape()">披风PNG</button><span class="cape-status" id="capeStatus">披风:未加载</span><input type="file" id="capeFile" accept="image/*" style="display:none" onchange="onCapeFile(event)"><input type="file" id="skinFile" accept="image/png" style="display:none" onchange="onSkinFile(event)"></div><div class="skin3d-hint">拖动旋转 · 滚轮缩放 · 右键拖动平移 · 切换 Steve / Alex 模型</div></div>
+<div class="music-bar"><span class="music-icon">🎵</span><div class="music-controls"><button onclick="prevTrack()">⏮</button><button id="playPauseBtn" onclick="togglePlay()">▶</button><button onclick="nextTrack()">⏭</button></div><div class="music-info"><div class="music-title" id="musicTitle">未播放音乐</div><div class="music-progress" onclick="seekMusic(event)"><div class="music-progress-fill" id="musicProgressFill"></div></div></div><button class="speed-btn active" data-speed="1" onclick="setSpeed(1,this)">1.0x</button><button class="speed-btn" data-speed="1.25" onclick="setSpeed(1.25,this)">1.25x</button><button class="speed-btn" data-speed="1.5" onclick="setSpeed(1.5,this)">1.5x</button><button class="speed-btn" data-speed="2" onclick="setSpeed(2,this)">2.0x</button><button id="loopBtn" onclick="toggleLoop()">🔁</button><span>🔊</span><input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" oninput="setVolume(this.value)"></div>
+<div class="rabbit" id="rabbit" oncontextmenu="showRabbitMenu(event)"
+     ondragover="event.preventDefault();this.classList.add('drag-over')"
+     ondragleave="this.classList.remove('drag-over')"
+     ondrop="handlePetDrop(event)">
+  <div id="rabbitSkinHost" style="width:65px;height:78px;display:flex;align-items:center;justify-content:center">
+    <svg viewBox="0 0 100 120" width="65" height="78" id="rabbitSvg">
+      <!-- 耳朵 -->
+      <ellipse cx="35" cy="18" rx="8" ry="22" fill="#fff" stroke="#666" stroke-width="1.5"/>
+      <ellipse cx="35" cy="20" rx="4" ry="16" fill="#ffc0cb"/>
+      <ellipse cx="65" cy="18" rx="8" ry="22" fill="#fff" stroke="#666" stroke-width="1.5"/>
+      <ellipse cx="65" cy="20" rx="4" ry="16" fill="#ffc0cb"/>
+      <!-- 圆脸 -->
+      <ellipse cx="50" cy="60" rx="30" ry="28" fill="#fff" stroke="#666" stroke-width="1.5"/>
+      <!-- 眼睛 -->
+      <circle cx="38" cy="55" r="4" fill="#333"/>
+      <circle cx="62" cy="55" r="4" fill="#333"/>
+      <!-- 鼻子 -->
+      <ellipse cx="50" cy="65" rx="4" ry="3" fill="#ff9eb5"/>
+      <!-- 嘴（小胡子） -->
+      <path d="M50 68 L50 72" stroke="#666" stroke-width="1.2"/>
+      <path d="M44 72 Q47 75 50 73" stroke="#666" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <path d="M56 72 Q53 75 50 73" stroke="#666" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+</div>
+<div class="rabbit-chat" id="rabbitChat"></div>
+<div class="rabbit-emoji" id="rabbitEmoji"></div>
+<div class="rabbit-food" id="rabbitFood"><button onclick="feedCarrot()">🥕</button><button onclick="feedCabbage()">🥬</button></div>
+<audio id="audioPlayer"></audio>
+<script>
+  function updateClock(){const d=new Date();document.getElementById('clockDisplay').innerText=d.toTimeString().slice(0,8)}
+setInterval(updateClock,1000);updateClock()
+
+let ipcRenderer={invoke:(ch,...a)=>{if(ch==='get-config')return Promise.resolve({playerName:'Steve',maxMemory:1024,theme:'green',customColor:'',gameDir:'',authConfig:{}});if(ch==='get-versions')return Promise.resolve({releases:[],installed:[]});if(ch==='get-skin')return Promise.resolve(null);if(ch==='get-music-files')return Promise.resolve([]);return Promise.resolve(null)},on:()=>{},once:()=>{},send:()=>{},removeListener:()=>{},removeAllListeners:()=>{}},shell=null
+try{({ipcRenderer,shell}=require('electron'))}catch(e){/* 非 Electron 环境（如浏览器预览）时跳过 */}
+let playerName='Steve',maxMemory=1024,theme='green',customColor='',authMode='offline'
+let musicList=[],currentTrack=0,loopMode=0,mmMods=[],mmPacks=[],skinImgUrl=null
+let achs={},feedCount=0,rabbitX=0,rabbitY=0
+
+function toast(msg,type='info'){const c=document.getElementById('toastContainer');const icons={success:'✓',error:'✗',info:'ℹ',warning:'⚠'};const el=document.createElement('div');el.className='toast '+type;el.innerHTML='<span style="font-size:16px">'+(icons[type]||'ℹ')+'</span><span>'+msg+'</span>';c.appendChild(el);setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},3500)}
+
+/* 成就系统 */
+const ACH=[
+{id:'first_open',icon:'🎮',name:'初次见面',desc:'第一次打开启动器'},
+{id:'first_launch',icon:'🚀',name:'起航',desc:'第一次启动游戏'},
+{id:'first_login',icon:'🔑',name:'登录',desc:'外置登录成功'},
+{id:'first_mod',icon:'📦',name:'收藏家',desc:'导入第一个Mod'},
+{id:'first_music',icon:'🎵',name:'音乐之声',desc:'播放第一首歌'},
+{id:'first_skin',icon:'🎨',name:'换装',desc:'更换皮肤'},
+{id:'feed_rabbit',icon:'🥕',name:'喂兔子',desc:'喂兔子吃胡萝卜'},
+{id:'feed_cabbage',icon:'🥬',name:'素食主义',desc:'喂兔子吃白菜'},
+{id:'feed_10',icon:'🌟',name:'兔子管家',desc:'喂兔子10次'},
+{id:'find_egg',icon:'🥚',name:'彩蛋猎手',desc:'找到第一个彩蛋'},
+{id:'find_5_eggs',icon:'💎',name:'彩蛋大师',desc:'找到5个彩蛋'},
+{id:'night_mode',icon:'🌙',name:'夜行侠',desc:'切换到夜晚模式'},
+{id:'fabric_install',icon:'🧵',name:'织者',desc:'安装Fabric'},
+{id:'forge_install',icon:'🔨',name:'铁匠',desc:'安装Forge'},
+{id:'custom_theme',icon:'🎨',name:'设计师',desc:'自定义主题色'},
+{id:'rabbit_drag',icon:'🐰',name:'拖来拖去',desc:'拖动兔子'}
+]
+function unlockAch(id){
+  if(achs[id])return
+  const a=ACH.find(x=>x.id===id)
+  if(!a)return
+  achs[id]=true
+  saveAch()
+  const el=document.createElement('div')
+  el.className='ach-toast'
+  el.innerHTML=`<div class="ach-icon">${a.icon}</div><div class="ach-info"><h4>🏆 成就解锁: ${a.name}</h4><p>${a.desc}</p></div>`
+  document.getElementById('achContainer').appendChild(el)
+  setTimeout(()=>{el.style.transition='all .5s';el.style.opacity='0';el.style.transform='translateX(100px)';setTimeout(()=>el.remove(),500)},4000)
+}
+function loadAch(){try{achs=JSON.parse(localStorage.getItem('starrabbit_ach')||'{}')}catch(e){achs={}}}
+function saveAch(){localStorage.setItem('starrabbit_ach',JSON.stringify(achs))}
+
+/* 日夜切换 */
+function toggleDayNight(){
+  document.body.classList.toggle('night')
+  const isNight=document.body.classList.contains('night')
+  document.getElementById('daynightBtn').innerText=isNight?'☀️':'🌙'
+  localStorage.setItem('starrabbit_daynight',isNight?'night':'day')
+  if(isNight)unlockAch('night_mode')
+}
+
+/* 兔子吉祥物 */
+const OUTFITS={
+  default:{body:'#4ecca3',neck:'#38a169',label:'默认'},
+  green:{body:'#22c55e',neck:'#16a34a',label:'绿卫衣'},
+  pink:{body:'#f472b6',neck:'#db2777',label:'粉裙'},
+  christmas:{body:'#dc2626',neck:'#16a34a',label:'圣诞'},
+  naked:{body:'transparent',neck:'transparent',label:'裸兔'}
+}
+let currentOutfit='default'
+function initRabbit(){
+  const r=document.getElementById('rabbit')
+  // 从CSS的right/bottom换算出初始位置
+  const rect=r.getBoundingClientRect()
+  rabbitX=window.innerWidth-20-rect.width
+  rabbitY=window.innerHeight-80-rect.height
+  r.style.left=rabbitX+'px';r.style.top=rabbitY+'px'
+  r.style.right='auto';r.style.bottom='auto'
+  // 长按拖拽：短按=摸兔子，按住移动>5px才进入拖拽
+  let pressed=false,dragging=false,startX=0,startY=0,offX=0,offY=0;
+  const DRAG_THRESHOLD=5;
+  r.addEventListener('mousedown',e=>{
+    if(e.button!==0)return;
+    pressed=true;dragging=false;
+    startX=e.clientX;startY=e.clientY;
+    offX=e.clientX-rabbitX;offY=e.clientY-rabbitY;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!pressed)return;
+    if(!dragging){
+      if(Math.abs(e.clientX-startX)<DRAG_THRESHOLD && Math.abs(e.clientY-startY)<DRAG_THRESHOLD)return;
+      dragging=true;r.classList.add('dragging');
+    }
+    rabbitX=e.clientX-offX;rabbitY=e.clientY-offY;
+    r.style.left=rabbitX+'px';r.style.top=rabbitY+'px';
+    positionFood();
+  });
+  const endPress=e=>{
+    if(!pressed)return;
+    pressed=false;
+    if(dragging){
+      dragging=false;r.classList.remove('dragging');
+      unlockAch('rabbit_drag');
+    }else{
+      // 短按=摸兔子
+      r.classList.remove('happy');void r.offsetWidth;r.classList.add('happy');
+      const emojis=loadEmojis();
+      if(emojis.length&&Math.random()<0.2){
+        rabbitSay(emojis[Math.floor(Math.random()*emojis.length)]);
+      }else{
+        const custom=loadCustomMsgs();
+        const pats=['哇！好舒服~','摸摸头~','嘿嘿','再摸一下！','你最好了！'].concat(custom);
+        rabbitSay(pats[Math.floor(Math.random()*pats.length)]);
+      }
+      setTimeout(()=>r.classList.remove('happy'),500);
+    }
+  };
+  document.addEventListener('mouseup',endPress);
+  // 阻止图片皮肤默认拖拽出幽灵图
+  r.addEventListener('dragstart',e=>e.preventDefault());
+  setInterval(()=>{if(Math.random()<0.3)rabbitChat()},15000)
+  // 恢复上次保存的皮肤（轮询等待函数定义，避免跨 script 块时序问题）
+  let __petRetries=0;
+  const __petTimer=setInterval(()=>{
+    __petRetries++;
+    if(typeof applyPetSkin==='function'){
+      clearInterval(__petTimer);
+      try{applyPetSkin(loadSavedPetSkin())}catch(err){console.warn('恢复皮肤失败',err)}
+      try{loadPetScale()}catch(err){}
+    }else if(__petRetries>50){
+      clearInterval(__petTimer);
+    }
+  },50);
+}
+function positionFood(){
+  const f=document.getElementById('rabbitFood')
+  f.style.left=(rabbitX-20)+'px';f.style.top=(rabbitY-50)+'px'
+}
+function positionDressMenu(){
+  const d=document.getElementById('rabbitDress')
+  d.style.left=(rabbitX-20)+'px';d.style.top=(rabbitY-100)+'px'
+}
+function toggleFood(e){
+  positionFood()
+  document.getElementById('rabbitFood').classList.toggle('show')
+  document.getElementById('rabbitDress').classList.remove('show')
+  document.getElementById('rabbitChat').classList.remove('show')
+}
+function toggleDressMenu(){
+  positionDressMenu()
+  document.getElementById('rabbitDress').classList.toggle('show')
+  document.getElementById('rabbitFood').classList.remove('show')
+}
+function setOutfit(name,btn){
+  currentOutfit=name
+  const o=OUTFITS[name]
+  const outfitG=document.getElementById('rabbitOutfit')
+  if(name==='naked'){outfitG.style.display='none'}
+  else{
+    outfitG.style.display='block'
+    const paths=outfitG.querySelectorAll('path')
+    if(paths[0])paths[0].setAttribute('fill',o.body)
+    if(paths[1])paths[1].setAttribute('fill',o.neck)
+  }
+  document.querySelectorAll('#rabbitDress button').forEach(b=>b.classList.remove('active'))
+  if(btn)btn.classList.add('active')
+  localStorage.setItem('starrabbit_outfit',name)
+  const r=document.getElementById('rabbit')
+  r.classList.remove('happy');void r.offsetWidth;r.classList.add('happy')
+  rabbitSay('换上'+o.label+'啦！好看吗~')
+  setTimeout(()=>r.classList.remove('happy'),500)
+}
+function feedCarrot(){feed('🥕','胡萝卜真好吃！')}
+function feedCabbage(){feed('🥬','嗯~白菜也不错！')}
+function feed(emoji,msg){
+  feedCount++;unlockAch('feed_rabbit')
+  if(emoji==='🥕')unlockAch('feed_cabbage'===emoji?'feed_cabbage':'feed_rabbit')
+  if(feedCount>=10)unlockAch('feed_10')
+  document.getElementById('rabbitFood').classList.remove('show')
+  rabbitSay(msg)
+  const r=document.getElementById('rabbit')
+  r.classList.remove('happy','eating');void r.offsetWidth
+  r.classList.add('eating')
+  setTimeout(()=>{r.classList.remove('eating');r.classList.add('happy');setTimeout(()=>r.classList.remove('happy'),500)},1200)
+}
+function rabbitSay(msg){
+  const c=document.getElementById('rabbitChat');
+  const e=document.getElementById('rabbitEmoji');
+  // 图片表情包：走独立浮层 #rabbitEmoji，无白色背景
+  if(msg&&typeof msg==='object'&&msg.dataUrl){
+    c.classList.remove('show');c.classList.add('hide');
+    e.innerHTML='<img src="'+msg.dataUrl+'" draggable="false" alt="'+escapeHtml(msg.name||'emoji')+'">';
+    e.style.left=(rabbitX+10)+'px';
+    e.style.top=(rabbitY-150)+'px';
+    e.classList.remove('hide');e.classList.add('show');
+    c._t&&clearTimeout(c._t);
+    e._t&&clearTimeout(e._t);
+    e._t=setTimeout(()=>{e.classList.remove('show');e.classList.add('hide');setTimeout(()=>e.classList.remove('hide'),300)},5000);
+    return;
+  }
+  // 文字：走白色气泡
+  e.classList.remove('show');e.classList.add('hide');
+  c.innerText=msg;
+  c.style.left=rabbitX+'px';c.style.top=(rabbitY-60)+'px';
+  c.classList.remove('hide');c.classList.add('show');
+  clearTimeout(c._t);
+  c._t=setTimeout(()=>{c.classList.remove('show');c.classList.add('hide');setTimeout(()=>c.classList.remove('hide'),300)},4000);
+}
+const RABBIT_MSGS=[
+// 早上问候
+'早上好！今天也要玩MC吗？','早上起来打一局生存吧！','☀️ 阳光正好，适合挖矿！','早安~ 吃早餐了吗？','新的一天，新的冒险！','早上好，今天精神怎么样？','☀️ 早起的鸟儿有虫吃！','早安！今天也要加油哦~','早上好！准备好开始新的一天了吗？','☀️ 早晨的空气真清新！',
+// 下午问候
+'下午好！吃了吗？','该喝口水休息一下~','🌳 去砍树吧！','下午好，别太累了~','☕ 喝杯茶休息一下？','下午犯困了吗？要不要来一局MC提神？','🌤️ 下午时光正好','下午好！今天过得怎么样？','🍪 吃点零食吧！','下午好，记得起来活动活动~',
+// 晚上问候
+'晚上好！今天过得怎么样？','🌙 晚上适合下地狱探险！','要不要联机？','晚上好！终于可以放松了~','🌃 夜晚是玩家的黄金时间！','晚上好，今天有什么开心的事吗？','🌙 夜深了，注意休息哦~','晚上好！准备玩到几点？','🌃 今晚的MC世界等着你！','晚上好，记得早点睡觉哦~',
+// 深夜
+'这么晚了还不睡？','深夜玩家啊...','🌃 注意休息哦！','还在肝？身体要紧啊！','🌙 深夜党报道！','这么晚了还在玩？小心明天起不来~','🌃 熬夜对身体不好哦！','你也是夜猫子吗？','🌙 深夜适合建大型建筑！','这么晚了，要不要听首歌放松？',
+// MC相关
+'今天下矿了吗？','记得带够火把！','小心苦力怕！','钻石在Y=-58层哦~','🌳 木头是万物之源！','记得做床睡觉！','别挖直线，容易掉岩浆！','铁傀儡保护村庄~','🐷 猪排很好吃！','🐔 鸡蛋可以做蛋糕！','钻石镐耐久是多少来着？','附魔台需要书架~','下界之星好稀有！','末影龙好难打...','🌋 去下界看看吧！','海底神殿有宝藏！','丛林神殿藏着东西！','沙漠神殿小心TNT！','女巫小屋有炼药台！','🌾 种小麦做面包！','🐟 钓鱼也很解压！','红石好玩但头大...','活塞是万能的！','观察者好神奇！','发射器射箭超方便！','漏斗自动卸货！','比较器测信号强度！','中继器延长线路！','☀️ 日光传感器控制灯光！','☁️ 雨天怪物更多！','打雷天小心三叉戟！','雪层上面不会刷怪！','蘑菇岛没有怪物！','🏝️ 沙漠绿洲好稀有！','🏔️ 雪山好美！','🌲 黑森林好阴森！','🌸 樱花林好浪漫！','红树林在沼泽里！','🐼 竹子在竹林里！','🦊 狐狸会偷东西！','🐺 狼可以驯服成狗！','🐱 豹猫也可以驯服！','🐴 马需要马鞍！','🐮 牛给牛奶和皮革！','🐑 羊给羊毛！','🐔 鸡给鸡蛋和羽毛！','🐷 猪可以骑猪！','🐰 兔子好可爱！','🐙 鱿鱼在水里！','🦇 蝙蝠在矿洞里！','🐝 蜜蜂会蛰人！','🦋 蝴蝶在花上！','🐢 海龟在沙滩上！','🐠 热带鱼好漂亮！','🐡 河豚会中毒！','🦈 守卫者在海底！','🐙 远古守卫者更厉害！','🧟 僵尸怕阳光！','💀 骷髅射箭准！','🧟‍♂️ 尸壳在沙漠！','🧟‍♀️ 溺尸在水里！','🕷️ 蜘蛛白天中立！','🐺 狼在森林里！','🐻 北极熊在雪地！','🐗 疣猪兽在下界！','🐤 小鸡是卵生的！','🥚 扔鸡蛋有概率出小鸡！','🍞 面包用小麦做！','🍖 熟肉恢复更多饱食度！','🍲 炖菜用碗装！','🍎 苹果从树叶掉落！','🥕 胡萝卜种农田！','🥔 土豆烤了更好吃！','🍅 西红柿...不对MC里没有！','🌽 玉米也没有！','🍇 葡萄也没有！','MC里有甜菜根！','🎃 南瓜灯照明！','🔥 岩浆桶当壁炉！','💧 水桶防止摔伤！','🛏️ 床可以跳过夜晚！','🚪 门分木门铁门！','🪟 窗户用玻璃！','🧱 砖块用黏土烧！','🪨 石头是最基础的！','⛏️ 木镐挖石头！','🪓 斧头砍树快！','🗡️ 剑打怪快！','🔱 三叉戟可以扔出去！','🏹 弓需要箭！','📖 书用来做书架！','🧪 药水需要酿药台！','🔮 末地传送门！','🌀 下界传送门！','⚡ 闪电苦力怕！','🌱 骨粉催熟植物！','💀 骷髅头可以摆放！','🐚 海龟壳当头盔！','🐝 蜂蜜瓶可以喝！','🍯 蜂巢在树上！','🧱 下界合金最硬！','💎 钻石装备很强！','🥇 黄金工具快但脆！','🥉 铁装备中庸！','🪨 石头工具初期用！','🪵 木头先做工作台！','📦 工作台是核心！','⚒️ 熔炉烧东西！','🔥 燃烧的熔炉！','💨 烟熏炉烧食物快！','🔥 高炉烧矿石快！','🧊 冰面上滑滑的！','❄️ 雪层可以堆雪人！','⛄ 雪傀儡保护你！','🧟‍♂️ 铁傀儡保护村庄！','🌸 花可以做染料！','🎨 染料染羊毛！','🌈 羊毛颜色真多！','🧶 线从蜘蛛掉落！','🕸️ 蜘蛛网减速！','🪤 陷阱箱触发红石！','📦 末影箱共享存储！','🔒 木桶比箱子小！','🗑️ 扔东西用垃圾桶！','🚿 炼药锅装水！','🫗 玻璃瓶装药水！','📏 物品展示框挂东西！','🖼️ 画装饰家里！','🪞 没有镜子！','🪑 没有椅子！','🛏️ 床也可以当装饰！','🏠 建造属于你的家！','🌉 桥连接两岸！','🪜 梯子上下爬！','🧗 藤蔓也可以爬！','🪜 脚手架更好用！','🛶 船在水上快！','🚗 没有车！','🐎 骑马跑的快！','🐖 骑猪需要胡萝卜钓竿！','🚂 矿车在轨道上！','🛤️ 轨道需要动力！','⚡ 充能铁轨加速！','🧲 探测铁轨检测！','🪝 钓鱼竿钓鱼！','🪣 桶装鱼！','🐟 生鱼喂豹猫！','🐦‍⬛ 鹦鹉在丛林！','🦜 鹦鹉可以训服！','🐔 鸡骑士好稀有！','🐴 骷髅骑士！','🧟‍♂️ 僵尸骑鸡！','💀 骷髅骑马！','🧟‍♂️ 僵尸村民可以治愈！','🤝 交易村民！','📚 图书管理员买书！','⛏️ 工具商买镐子！','🍞 农民卖面包！','🛡️ 盔甲商买装备！','🏹 造箭师卖箭！','🔧 武器商卖剑！','⚗️ 牧师卖药水！','🐦‍⬛ 制图师卖地图！','👟 皮匠卖靴子！','🧱 石匠卖砖块！','🤠 傻子村民没用！','🌾 农民种地！','⛏️ 工具商挖矿！','🏠 村民需要床！','🔔 钟集合村民！','🛏️ 村民早上出门晚上回家！','😱 女巫扔药水！','🧟‍♂️ 僵尸敲门！','💀 骷髅在阳光下燃烧！','🕷️ 蜘蛛可以爬墙！','🐺 狼围攻羊！','🐱 猫赶走苦力怕！','🦴 骨头喂狼！','🐟 鱼喂猫！','🍖 肉喂狗！','🐑 羊吃草！','🌾 小麦喂牛羊！','🐰 兔子吃胡萝卜！','🐝 蜜蜂给花授粉！','🌸 花长得更快！','🍎 苹果喂牛？不对！','🐷 猪喂胡萝卜土豆！','🐔 鸡喂种子！','🐢 海龟喂海草！','🐶 狗喂任何肉！','🐱 猫喂生鱼！','🦜 鹦鹉喂种子！','🐎 马喂糖小麦苹果！','🧟‍♂️ 僵尸村民喂金苹果！','💊 虚弱药水治疗僵尸村民！','🍎 金苹果需要金粒！','✨ 附魔金苹果更强！','📖 附魔台附魔！','🔮 铁砧重命名！','🔧 砂轮修工具！','🛠️ 锻造台升级装备！','🪚 切石机切石头！','🔥 烟熏炉烧食物！','💨 高炉烧矿石！','📊 制图台做地图！','📚 织布机做旗帜！','🧵 织布机也可以！','🪤 堆肥桶做骨粉！','🦴 骨粉催熟！','🌱 农作物长得快！','🌽 没有玉米！','🥕 胡萝卜！','🥔 土豆！','🍅 没有番茄！','🌾 小麦！','🍄 蘑菇！','🌸 甜浆果！','🍇 没有葡萄！','🍉 西瓜！','🎃 南瓜！','🧃 苹果汁？没有！','🥛 牛奶解除效果！','🍶 蜜酒？没有！','🧪 药水！','⚗️ 酿药！','🔥 烈焰棒！','🐷 岩浆膏！','🕸️ 蛛眼！','💀 末影珍珠！','👁️ 末影之眼！','🔮 末地！','🐉 末影龙！','🦴 凋灵骷髅！','🔥 烈焰人！','🐛 岩浆怪！','👻 恶魂！','🕷️ 蜘蛛骑士！','🧟‍♂️ 僵尸猪灵！','💀 凋灵！','🌟 下界之星！','🏆 成就！','🎖️ 进度！','📜 配方！','🔍 探索！','🗺️ 地图！','🧭 指南针！','⏰ 时钟！','🔥 火！','💧 水！','🌪️ 龙卷风？没有！','🌋 火山？没有！','🌊 海洋！','🏝️ 海岛！','🏔️ 高山！','🌲 森林！','🏜️ 沙漠！','❄️ 雪地！','🌴 丛林！','🌾 平原！','🍄 蘑菇岛！','💀 下界！','🌟 末地！','🌌 虚空！','🎮 玩MC！','🎵 听歌！','💻 写代码！','📚 学习！','😴 睡觉！','🍕 吃饭！','☕ 喝咖啡！','🧃 喝饮料！','🚶 散步！','🏃 跑步！','🚴 骑车！','✈️ 坐飞机！','🚗 开车！','🚂 坐火车！','🚢 坐船！','🎮 玩游戏！','📺 看电视！','🎬 看电影！','📖 看书！','✏️ 写字！','🖥️ 用电脑！','📱 玩手机！','💻 敲键盘！','🖱️ 点鼠标！','⌨️ 按键盘！','👀 看屏幕！','👂 听声音！','👃 闻味道！','👄 说话！','✋ 举手！','🦶 跺脚！','🤝 握手！','🙏 祈祷！','💪 加油！','👍 点赞！','👎 踩！','👋 再见！','👋 你好！','😊 微笑！','😢 哭！','😡 生气！','😱 害怕！','🤔 思考！','😴 困！','🥱 打哈欠！','😮 惊讶！','😍 喜欢！','🤢 恶心！','🤮 吐！','🤧 打喷嚏！','🥵 热！','🥶 冷！','🤒 发烧！','🤕 受伤！','💊 吃药！','🏥 医院！','🚑 救护车！','👨‍⚕️ 医生！','👩‍⚕️ 护士！','🦷 牙齿！','👁️ 眼睛！','👂 耳朵！','👃 鼻子！','👄 嘴巴！','👅 舌头！','✋ 手！','🦶 脚！','🦴 骨头！','🧠 大脑！','❤️ 心脏！','🫁 肺！','🫀 血管！','🧤 手套！','🧣 围巾！','🧢 帽子！','👕 衣服！','👖 裤子！','👟 鞋子！','🧦 袜子！','👗 裙子！','👔 领带！','👓 眼镜！','🕶️ 墨镜！','⌚ 手表！','💍 戒指！','📿 项链！','🎒 书包！','👜 包包！','🧳 行李箱！','🪑 椅子！','🛏️ 床！','🚪 门！','🪟 窗户！','🛋️ 沙发！','📺 电视！','📻 收音机！','🎵 音乐！','🎶 旋律！','🎸 吉他！','🎹 钢琴！','🥁 鼓！','🎺 小号！','🎻 小提琴！','🪗 手风琴！','🎤 麦克风！','🎧 耳机！','📷 相机！','📹 摄像机！','📱 手机！','💻 电脑！','🖥️ 显示器！','⌨️ 键盘！','🖱️ 鼠标！','🖨️ 打印机！','📠 传真机！','☎️ 电话！','📞 听筒！','📟 寻呼机！','📠 打印机！','💡 灯泡！','🔦 手电筒！','🕯️ 蜡烛！','🔥 火！','🌡️ 温度计！','⏰ 闹钟！','⌛ 沙漏！','📅 日历！','📆 日程！','📊 图表！','📈 上涨！','📉 下跌！','📋 清单！','📝 笔记！','📄 文件！','📑 标签！','📁 文件夹！','📂 打开的文件夹！','🗂️ 文件分类！','📌 图钉！','📍 定位！','✏️ 铅笔！','🖊️ 钢笔！','🖍️ 蜡笔！','🖌️ 画笔！','🎨 颜料！','📏 尺子！','📐 三角尺！','✂️ 剪刀！','🖍️ 蜡笔！','📎 回形针！','🖇️ 链接！','📎 回形针！','📦 包裹！','📫 邮箱！','📪 邮箱！','📬 邮箱！','📭 邮箱！','📮 邮箱！','📯 喇叭！','📰 报纸！','📚 书！','📖 打开的书！','📕 红色的书！','📗 绿色的书！','📘 蓝色的书！','📙 橙色的书！','📓 笔记本！','📔 带装饰的笔记本！','📒 账本！','📑 标签！','🔖 书签！','💰 钱！','💵 美元！','💴 日元！','💶 欧元！','💷 英镑！','🪙 硬币！','💳 信用卡！','💎 钻石！','🏆 奖杯！','🥇 金牌！','🥈 银牌！','🥉 铜牌！','🎖️ 勋章！','🎗️ 绶带！','🏅 奖牌！','🎪 马戏团！','🎭 戏剧！','🎨 艺术！','🎬 电影！','🎤 唱歌！','🎧 音乐！','📻 收音机！','📺 电视！','🎮 游戏！','🕹️ 摇杆！','🎲 骰子！','♟️ 棋盘！','🎯 飞镖！','🎱 台球！','🎳 保龄球！','🏀 篮球！','⚽ 足球！','⚾ 棒球！','🥎 垒球！','🎾 网球！','🏐 排球！','🏈 橄榄球！','🏉 英式橄榄球！','🎱 台球！','🏓 乒乓球！','🏸 羽毛球！','🥊 拳击！','🥋 柔道！','⛷️ 滑雪！','🏂 单板滑雪！','🏄 冲浪！','🏊 游泳！','🚣 划船！','🧗 攀岩！','🚴 骑车！','🏃 跑步！','🏋️ 举重！','🤸 体操！','⛹️ 篮球！','🤺 击剑！','🏇 骑马！','🧘 冥想！','🤾 手球！','🏌️ 高尔夫！','🏹 射箭！','🎣 钓鱼！','🥏 飞盘！','🎳 保龄球！','🎿 滑雪！','🛷 雪橇！','🪂 跳伞！','🚀 火箭！','✈️ 飞机！','🚁 直升机！','🚂 火车！','🚃 火车！','🚄 高铁！','🚅 动车！','🚆 火车！','🚇 地铁！','🚈 轻轨！','🚉 火车站！','🚊 有轨电车！','🚝 单轨！','🚞 山区火车！','🚋 有轨电车！','🚌 公交车！','🚍 公交车！','🚎 无轨电车！','🚐 面包车！','🚑 救护车！','🚒 消防车！','🚓 警车！','🚔 警车！','🚕 出租车！','🚖 出租车！','🚗 汽车！','🚘 汽车！','🚙 SUV！','🚚 卡车！','🚛 货车！','🚜 拖拉机！','🏎️ 赛车！','🏍️ 摩托车！','🚲 自行车！','🛵 电动车！','🛴 滑板车！','🛹 滑板！','🚤 快艇！','🛥️ 游艇！','🚢 轮船！','⛵ 帆船！','🛶 独木舟！','🚁 直升机！','🚀 火箭！','🛸 飞碟！','🚁 直升机！','🛩️ 小飞机！','✈️ 飞机！','🛫 起飞！','🛬 降落！','🪂 跳伞！','🎈 气球！','🎏 鲤鱼旗！','🎆 烟花！','🎇 烟花！','✨ 星星！','🎊 彩带！','🎉 庆祝！','🎁 礼物！','🎀 蝴蝶结！','🎎 日本人偶！','🎏 鲤鱼旗！','🎐 风铃！','🎑 赏月！','🧧 红包！','🎃 南瓜灯！','🎄 圣诞树！','🕎 光明节灯台！','🎆 烟花！','🎇 烟花！','🧨 鞭炮！','🎈 气球！','🎏 鲤鱼旗！','🎐 风铃！','🎑 赏月！','🧧 红包！','🎃 南瓜灯！','🎄 圣诞树！','🎅 圣诞老人！','🦌 驯鹿！','🛷 雪橇！','❄️ 雪花！','⛄ 雪人！','🌨️ 下雪！','🌧️ 下雨！','⛈️ 雷雨！','🌩️ 闪电！','🌪️ 龙卷风！','🌫️ 雾！','🌁 雾！','🌊 海浪！','💧 水滴！','💦 水花！','☔ 雨伞！','☂️ 雨伞！','⛄ 雪人！','🌟 星星！','⭐ 星星！','✨ 闪光！','💫 旋转！','🌙 月亮！','🌛 月亮！','🌜 月亮！','🌚 新月！','🌝 满月！','🌞 太阳！','🌔 月亮！','🌓 月亮！','🌒 月亮！','🌑 新月！','🌕 满月！','🌖 月亮！','🌗 月亮！','🌘 月亮！','🌏 地球！','🌍 地球！','🌎 地球！','🌋 火山！','🗻 富士山！','🏔️ 雪山！','🌋 火山！','🗾 日本！','🏕️ 露营！','🏖️ 海滩！','🏜️ 沙漠！','🏝️ 荒岛！','🏞️ 国家公园！','🏟️ 体育场！','🏛️ 古典建筑！','🏗️ 工地！','🧱 砖块！','🪵 木头！','🪨 石头！','⛰️ 山！','🌋 火山！','🗻 富士山！','🏔️ 雪山！','🏕️ 露营！','🏖️ 海滩！','🏜️ 沙漠！','🏝️ 荒岛！','🏞️ 国家公园！','🏟️ 体育场！','🏛️ 古典建筑！','🏗️ 工地！','🧱 砖块！','🪵 木头！','🪨 石头！','🌳 树！','🌲 树！','🌴 棕榈树！','🌵 仙人掌！','🌿 草！','☘️ 三叶草！','🍀 四叶草！','🎍 竹子！','🎋 竹筒！','🍃 叶子！','🍂 落叶！','🍁 枫叶！','🌺 花！','🌸 樱花！','🌼 花！','🌻 向日葵！','🌹 玫瑰！','🥀 枯花！','🌷 郁金香！','🪷 莲花！','💐 花束！','🍄 蘑菇！','🌰 栗子！','🥜 花生！','🍞 面包！','🥐 牛角包！','🥖 法棍！','🥨 椒盐卷饼！','🥯 贝果！','🥞 松饼！','🧇 华夫饼！','🧀 奶酪！','🍖 肉！','🍗 鸡腿！','🥩 牛排！','🥓 培根！','🍔 汉堡！','🍟 薯条！','🍕 披萨！','🌭 热狗！','🥪 三明治！','🌮 塔可！','🌯 卷饼！','🥙 皮塔！','🧆 丸子！','🥚 鸡蛋！','🍳 煎蛋！','🥘 炖菜！','🍲 火锅！','🥣 碗！','🥗 沙拉！','🍿 爆米花！','🧈 黄油！','🧂 盐！','🥫 罐头！','🍱 便当！','🍘 仙贝！','🍙 饭团！','🍚 米饭！','🍛 咖喱饭！','🍜 拉面！','🍝 意大利面！','🍠 红薯！','🍢 关东煮！','🍣 寿司！','🍤 天妇罗！','🍥 鱼糕！','🥮 月饼！','🍡 团子！','🥟 饺子！','🥠 幸运饼！','🥡 外卖！','🦀 螃蟹！','🦞 龙虾！','🦐 虾！','🦑 鱿鱼！','🦪 牡蛎！','🍤 天妇罗！','🍣 寿司！','🍱 便当！','🍚 米饭！','🍜 面条！','🍝 意面！','🍲 汤！','🥘 炖菜！','🍛 咖喱！','🍠 红薯！','🍢 关东煮！','🍡 团子！','🥟 饺子！','🥠 幸运饼！','🥡 外卖！','🦀 螃蟹！','🦞 龙虾！','🦐 虾！','🦑 鱿鱼！','🦪 牡蛎！','🍦 冰淇淋！','🍧 刨冰！','🍨 冰淇淋！','🍩 甜甜圈！','🍪 饼干！','🎂 蛋糕！','🍰 蛋糕！','🧁 纸杯蛋糕！','🥧 派！','🍫 巧克力！','🍬 糖果！','🍭 棒棒糖！','🍮 布丁！','🍯 蜂蜜！','🍼 奶瓶！','🥛 牛奶！','☕ 咖啡！','🍵 茶！','🍶 清酒！','🍾 香槟！','🍷 红酒！','🍸 鸡尾酒！','🍹 果汁！','🍺 啤酒！','🍻 干杯！','🥂 香槟！','🥃 烈酒！','🥤 可乐！','🧋 珍珠奶茶！','🧃 果汁！','🧉 马黛茶！','🧊 冰块！','🥢 筷子！','🍽️ 盘子！','🍴 刀叉！','🥄 勺子！','🔪 菜刀！','🏺 陶罐！'
+]
+function rabbitChat(){
+  const h=new Date().getHours()
+  let msgs
+  if(h>=6&&h<11)msgs=['早上好！今天也要玩MC吗？','早安~ 吃早餐了吗？','☀️ 阳光正好，适合挖矿！','新的一天，新的冒险！','早起的鸟儿有虫吃！','☀️ 早晨的空气真清新！','早上好！准备好开始新的一天了吗？','早安！今天也要加油哦~','早上起来打一局生存吧！','☀️ 今天也是元气满满的一天！']
+  else if(h>=11&&h<14)msgs=['中午好！吃饭了吗？','🍚 午饭时间到！','下午准备做什么？','☀️ 正午阳光正好','中午好！休息一下吧','🍱 吃午饭了吗？','中午好！今天天气不错','🍜 中午吃什么好呢？','中午好！别玩太久哦','🍞 吃点东西吧！']
+  else if(h>=14&&h<18)msgs=['下午好！喝口水休息一下~','🌳 去砍树吧！','☕ 下午茶时间！','下午好！别太累了~','🌤️ 下午时光正好','下午好！今天过得怎么样？','🍪 吃点零食吧！','下午好，记得起来活动活动~','🌳 木头砍够了吗？','下午好！要不要联机？']
+  else if(h>=18&&h<22)msgs=['晚上好！今天过得怎么样？','🌙 晚上适合下地狱探险！','要不要联机？','晚上好！终于可以放松了~','🌃 夜晚是玩家的黄金时间！','晚上好！今天有什么开心的事吗？','晚上好！准备玩到几点？','🌃 今晚的MC世界等着你！','晚上好！吃晚饭了吗？','🌙 晚上适合建房子！']
+  else if(h>=22&&h<24)msgs=['夜深了，注意休息哦！','🌙 这么晚了还不睡？','深夜玩家啊...','还在肝？身体要紧啊！','🌃 深夜党报道！','这么晚了还在玩？小心明天起不来~','🌙 深夜适合建大型建筑！','这么晚了，要不要听首歌放松？','🌃 熬夜对身体不好哦！','你也是夜猫子吗？']
+  else msgs=['这么晚了还不睡？','🌃 注意休息哦！','深夜玩家啊...','还在肝？身体要紧啊！','🌙 这么晚了，该睡觉了！','凌晨了！快睡觉！','🌃 熬夜伤身哦！','你是通宵党吗？','🌙 凌晨的世界很安静~','早点休息吧！']
+  // 随机混入通用消息 + 用户自定义语句
+  const customMsgs=loadCustomMsgs();
+  const emojis=loadEmojis();
+  // 约 15% 概率发一张表情包（如果有的话）
+  if(emojis.length&&Math.random()<0.15){
+    rabbitSay(emojis[Math.floor(Math.random()*emojis.length)]);
+    return;
+  }
+  const allMsgs=msgs.concat(RABBIT_MSGS).concat(customMsgs);
+  rabbitSay(allMsgs[Math.floor(Math.random()*allMsgs.length)])
+}
+
+/* 彩蛋系统 */
+const EGG_TARGETS=[
+{id:'egg1',x:0,y:0,msg:'你发现了左上角的彩蛋！🎉'},
+{id:'egg2',x:100,y:50,msg:'侧边栏藏了一个彩蛋！'},
+{id:'egg3',x:50,y:50,msg:'左下角作者水印有惊喜~'},
+{id:'egg4',x:80,y:30,msg:'右上角月亮按钮点5次有惊喜！'},
+{id:'egg5',x:20,y:80,msg:'音乐按钮连点3次...'},
+{id:'egg6',x:50,y:50,msg:'兔子点10次会说话！'},
+{id:'egg7',x:90,y:90,msg:'右下角藏了星星⭐'},
+{id:'egg8',x:50,y:50,msg:'版本号点一下有惊喜'},
+{id:'egg9',x:30,y:50,msg:'刷新按钮连点5次...'},
+{id:'egg10',x:70,y:70,msg:'启动按钮连点10次...'},
+{id:'egg11',x:10,y:10,msg:'你是真的在到处点啊！'},
+{id:'egg12',x:50,y:50,msg:'好吧，你找到12个了！'},
+{id:'egg13',x:60,y:40,msg:'Mod仓库里有彩蛋！'},
+{id:'egg14',x:40,y:60,msg:'音乐库翻到底部...'},
+{id:'egg15',x:80,y:20,msg:'设置里的内存滑块拉到最大！'},
+{id:'egg16',x:20,y:20,msg:'公告页拉到底...'},
+{id:'egg17',x:50,y:90,msg:'进度条点一下...'},
+{id:'egg18',x:30,y:30,msg:'日志框点3次...'},
+{id:'egg19',x:70,y:50,msg:'头像右键...'},
+{id:'egg20',x:90,y:10,msg:'你太强了，20个彩蛋！'}
+]
+let eggCount=0
+document.addEventListener('click',e=>{
+  eggCount++
+  const idx=Math.floor(eggCount/5)-1
+  if(idx>=0&&idx<EGG_TARGETS.length&&!localStorage.getItem('egg_'+idx)){
+    localStorage.setItem('egg_'+idx,'1')
+    unlockAch('find_egg')
+    // toast提示已隐藏，让玩家自己发现彩蛋
+    if(Object.keys(localStorage).filter(k=>k.startsWith('egg_')).length>=5)unlockAch('find_5_eggs')
+  }
+})
+
+/* 主题 */
+const themes={green:{accent:'#4ecca3',accent2:'#38a169',glow:'rgba(78,204,163,0.35)'},purple:{accent:'#c084fc',accent2:'#9333ea',glow:'rgba(192,132,252,0.35)'},blue:{accent:'#38bdf8',accent2:'#0284c7',glow:'rgba(56,189,248,0.35)'},orange:{accent:'#fb923c',accent2:'#ea580c',glow:'rgba(251,146,60,0.35)'},pink:{accent:'#f472b6',accent2:'#db2777',glow:'rgba(244,114,182,0.35)'},gold:{accent:'#facc15',accent2:'#ca8a04',glow:'rgba(250,204,21,0.35)'},red:{accent:'#f87171',accent2:'#dc2626',glow:'rgba(248,113,113,0.35)'}}
+function shade(hex,a){const n=parseInt(hex.slice(1),16);let r=(n>>16)+a,g=((n>>8)&255)+a,b=(n&255)+a;r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')}
+function applyTheme(n,cc){let t;if(n==='custom'&&cc){t={accent:cc,accent2:shade(cc,-30),glow:cc+'55'}}else t=themes[n]||themes.green;document.documentElement.style.setProperty('--accent',t.accent);document.documentElement.style.setProperty('--accent2',t.accent2);document.documentElement.style.setProperty('--glow',t.glow);document.querySelectorAll('.theme-dot').forEach(d=>d.classList.toggle('selected',d.dataset.theme===n))}
+function setTheme(n){theme=n;customColor='';applyTheme(n)}
+function setCustomColor(c){theme='custom';customColor=c;applyTheme('custom',c);unlockAch('custom_theme');document.querySelectorAll('.theme-dot').forEach(d=>d.classList.remove('selected'))}
+function setAuth(mode){authMode=mode;document.querySelectorAll('.auth-tab').forEach(t=>t.classList.toggle('active',t.dataset.auth===mode));document.querySelectorAll('.auth-fields').forEach(f=>f.classList.remove('active'));document.getElementById('fields-'+mode).classList.add('active')}
+function togglePwd(){const p=document.getElementById('ygPass');p.type=p.type==='password'?'text':'password'}
+
+function drawAvatar(u){const c=document.getElementById('avatarCanvas');const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.clearRect(0,0,50,50);if(!u){x.fillStyle='#c6c6c6';x.fillRect(5,5,40,40);x.fillStyle='#3b2310';x.fillRect(12,18,8,8);x.fillRect(30,18,8,8);return}const img=new Image();img.onload=()=>{const k=img.width/64,hs=8*k,ht=8*k;x.drawImage(img,hs,ht,hs,ht,0,0,50,50);x.drawImage(img,hs+32*k,ht,hs,ht,0,0,50,50)};img.src=u}
+function drawSkinPreview(u){const c=document.getElementById('skinPreviewCanvas');const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.clearRect(0,0,96,96);if(!u){x.fillStyle='#c6c6c6';x.fillRect(8,8,80,80);return}const img=new Image();img.onload=()=>{const k=img.width/64,hs=8*k,ht=8*k;x.drawImage(img,hs,ht,hs,ht,8,8,80,80);x.drawImage(img,hs+32*k,ht,hs,ht,8,8,80,80)};img.src=u}
+function openSkinModal(){document.getElementById('skin-modal').classList.add('open');drawSkinPreview(skinImgUrl)}
+function closeSkinModal(){document.getElementById('skin-modal').classList.remove('open')}
+function pickSkin(){document.getElementById('externalSkinFile').click()}
+function onExternalSkinFile(e){
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{skinImgUrl=rd.result;drawAvatar(skinImgUrl);drawSkinPreview(skinImgUrl);toast('皮肤已更换','success');try{localStorage.setItem('starrabbit_skin',skinImgUrl)}catch(err){}};
+  rd.readAsDataURL(f);
+  e.target.value='';
+}
+async function clearSkin(){await ipcRenderer.invoke('clear-skin');skinImgUrl=null;drawAvatar(null);drawSkinPreview(null);toast('已恢复Steve','info')}
+async function setSkinType(t){await ipcRenderer.invoke('set-skin-type',t);if(t==='random'){const types=['steve','alex'];skinImgUrl=null;drawAvatar(null);toast('随机皮肤: '+types[Math.floor(Math.random()*2)],'info')}else if(t==='steve'){skinImgUrl=null;drawAvatar(null);toast('Steve皮肤','info')}else if(t==='alex'){skinImgUrl=null;drawAvatar(null);toast('Alex皮肤','info')}drawSkinPreview(skinImgUrl)}
+
+let allVersions=[];let verCat='release';
+function setVerCat(cat,btn){verCat=cat;document.querySelectorAll('.ver-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderVersions()}
+async function loadVersions(){const s=document.getElementById('versionSelect');s.innerHTML='<option>加载中...</option>';try{const{releases,installed}=await ipcRenderer.invoke('get-versions');allVersions=releases||[];window.__installed=installed||[];renderVersions()}catch(e){s.innerHTML='<option>加载失败点🔄重试</option>'}}
+function renderVersions(){const s=document.getElementById('versionSelect');const installed=window.__installed||[];s.innerHTML='';
+if(installed.length){installed.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent='✅ '+v;s.appendChild(o)});s.appendChild(new Option('── 在线下载 ──','',false,false))}
+const filtered=allVersions.filter(v=>{if(verCat==='release')return v.type==='release';if(verCat==='snapshot')return v.type==='snapshot'&&!/(or_b|oneblock|shareware|infinite|15w14a|23w13a|22w13|20w14)/i.test(v.id);if(verCat==='event')return /(or_b|oneblock|shareware|infinite|15w14a|23w13a|22w13|20w14)/i.test(v.id);return v.type==='old_beta'||v.type==='old_alpha'});
+filtered.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent='⬇️ '+v.id;s.appendChild(o)});
+if(installed.length)s.value=installed[0];
+document.getElementById('status').innerText=installed.length?('✅ 已装 '+installed.length+' 个: '+installed.join(', ')):'就绪 · 暂无已安装版本，请选下面可下载版本';
+renderVersionList()}
+function versionRowTag(v){if(v.installed)return{text:'已安装',cls:'installed'};if(v.type==='snapshot')return{text:'预览',cls:'snapshot'};if(v.type==='old_beta'||v.type==='old_alpha')return{text:'远古',cls:'old'};if(v.type==='event')return{text:'活动',cls:'event'};return{text:'正式',cls:''}}
+function renderVersionList(){const box=document.getElementById('versionList');if(!box)return;const installed=window.__installed||[];box.innerHTML='';
+const filtered=allVersions.filter(v=>{if(verCat==='release')return v.type==='release';if(verCat==='snapshot')return v.type==='snapshot'&&!/(or_b|oneblock|shareware|infinite|15w14a|23w13a|22w13|20w14)/i.test(v.id);if(verCat==='event')return /(or_b|oneblock|shareware|infinite|15w14a|23w13a|22w13|20w14)/i.test(v.id);return v.type==='old_beta'||v.type==='old_alpha'});
+const seen=new Set();const rows=[];
+installed.forEach(v=>{rows.push({id:v,installed:true,type:'release'});seen.add(v)});
+filtered.forEach(v=>{if(!seen.has(v.id))rows.push({id:v.id,installed:false,type:v.type})});
+if(!rows.length){box.innerHTML='<div style="color:#666;padding:22px;text-align:center">该分类暂无版本</div>';return}
+const cur=document.getElementById('versionSelect').value;
+rows.forEach(r=>{const d=document.createElement('div');d.className='pcl-ver-row'+(r.id===cur?' selected':'');const tag=versionRowTag(r);
+d.innerHTML=`<span class="pv-name">${r.installed?'✅ ':''}${r.id}</span><span class="pv-tag ${tag.cls}">${tag.text}</span>`;
+d.onclick=()=>selectVersionRow(r.id,d);box.appendChild(d)})}
+function selectVersionRow(id,el){document.getElementById('versionSelect').value=id;document.querySelectorAll('.pcl-ver-row').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');onVersionPick();}
+async function refreshVersions(){const b=document.getElementById('refreshBtn');b.classList.add('spinning');try{await loadVersions()}finally{b.classList.remove('spinning')}}
+async function refreshMusic(){try{musicList=await ipcRenderer.invoke('get-music-files');renderMusicPage()}catch(e){toast('扫描失败: '+e.message,'error');console.error(e)}}
+async function addMusic(){try{const a=await ipcRenderer.invoke('add-music');if(a.length){toast('已添加'+a.length+'首','success');await refreshMusic()}}catch(e){toast('添加失败: '+e.message,'error');console.error(e)}}
+let musicTab='all',favSet=new Set()
+async function switchMusicTab(t){musicTab=t;document.getElementById('tabAll').style.opacity=t==='all'?'1':'0.5';document.getElementById('tabFav').style.opacity=t==='fav'?'1':'0.5';await loadFavSet();renderMusicPage()}
+async function loadFavSet(){try{const favs=await ipcRenderer.invoke('get-favorites');favSet=new Set(favs.map(f=>f.name))}catch(e){favSet=new Set()}}
+function renderMusicPage(){const box=document.getElementById('musicListPage');box.innerHTML='';let list=musicList;if(musicTab==='fav'){list=musicList.filter(m=>favSet.has(m.name))}document.getElementById('musicCount').innerText=list.length+'首';if(!list.length){box.innerHTML='<div style="color:#666;padding:20px">'+(musicTab==='fav'?'❤️ 喜爱列表为空':'没找到音乐')+'</div>';return}list.forEach((m)=>{const realIdx=musicList.indexOf(m);const d=document.createElement('div');d.className='music-item-row'+(realIdx===currentTrack?' current':'');const isFav=favSet.has(m.name);const safeName=m.name.replace(/'/g,"\\'");d.innerHTML=`<span class="idx">${realIdx===currentTrack?'▶':(realIdx+1)}</span><span class="name">${m.name}</span><span class="m-actions"><button class="m-btn" title="${isFav?'取消喜爱':'喜爱'}" onclick="event.stopPropagation();toggleFav('${safeName}')">${isFav?'❤️':'🤍'}</button><button class="m-btn" title="删除" onclick="event.stopPropagation();delOneMusic('${safeName}')">🗑</button></span>`;d.onclick=()=>playTrack(realIdx);box.appendChild(d)})}
+async function toggleFav(name){try{if(favSet.has(name)){await ipcRenderer.invoke('remove-favorite',name);favSet.delete(name);toast('已取消喜爱','info')}else{await ipcRenderer.invoke('add-favorite',name);favSet.add(name);toast('已加入喜爱','success')}renderMusicPage()}catch(e){toast('操作失败: '+e.message,'error')}}
+async function favoriteAll(){try{const n=await ipcRenderer.invoke('favorite-all-music');await loadFavSet();renderMusicPage();if(n>0)toast('已将 '+n+' 首音乐加入喜爱','success');else toast('没有新音乐需要添加','info')}catch(e){toast('操作失败: '+e.message,'error')}}
+async function delOneMusic(name){if(!confirm('删除 '+name+' ?'))return;try{await ipcRenderer.invoke('delete-music',name);toast('已删除','success');await refreshMusic()}catch(e){toast('删除失败: '+e.message,'error')}}
+function renderAchPage(){const box=document.getElementById('achList');box.innerHTML='';ACH.forEach(a=>{const un=!!achs[a.id];const d=document.createElement('div');d.className='mm-item'+(un?'':' disabled');d.innerHTML=`<div class="mm-item-info"><h4>${un?a.icon:'❓'} ${un?a.name:'???'}</h4><p>${un?a.desc:'未解锁'}</p></div>`;box.appendChild(d)})}
+
+async function init(){
+  loadAch()
+  unlockAch('first_open')
+  initRabbit()
+  if(localStorage.getItem('starrabbit_daynight')==='night'){document.body.classList.add('night');document.getElementById('daynightBtn').innerText='☀️'}
+  if(localStorage.getItem('starrabbit_simple')==='1'){document.body.classList.add('simple-ui')}
+  applyMode()
+  fillRepoVersionList()
+  refreshCacheStatus()
+  try{
+    const cfg=await ipcRenderer.invoke('get-config')
+    playerName=cfg.playerName||'Steve';maxMemory=cfg.maxMemory||1024;theme=cfg.theme||'green';customColor=cfg.customColor||''
+    document.getElementById('offlineName').value=playerName
+    document.getElementById('avatarName').innerText=playerName
+    document.getElementById('setMemory').value=maxMemory
+    document.getElementById('setMemoryVal').innerText=maxMemory+'M'
+    document.getElementById('setDir').innerText=cfg.gameDir
+    skinImgUrl=await ipcRenderer.invoke('get-skin');
+  if(!skinImgUrl){try{skinImgUrl=localStorage.getItem('starrabbit_skin')||null}catch(e){}}
+  drawAvatar(skinImgUrl)
+    if(cfg.authConfig&&cfg.authConfig.mode){
+      document.getElementById('ygUrl').value=cfg.authConfig.yggdrasilUrl||'https://littleskin.cn/api/yggdrasil'
+      document.getElementById('ygUser').value=cfg.authConfig.yggdrasilUser||''
+      setAuth(cfg.authConfig.mode)
+      if(cfg.authConfig.accessToken)document.getElementById('accountBadge').innerText='✓ '+cfg.authConfig.name
+    }
+    if(theme==='custom'&&customColor){document.getElementById('customColor').value=customColor;applyTheme('custom',customColor)}
+    else applyTheme(theme)
+    await loadVersions()
+    musicList=await ipcRenderer.invoke('get-music-files');renderMusicPage()
+    const st=await ipcRenderer.invoke('load-music-state')
+    if(musicList.length>0&&st.index<musicList.length){currentTrack=st.index;document.getElementById('musicTitle').innerText=musicList[currentTrack].name;audio.src=musicList[currentTrack].path;if(st.time)audio.currentTime=st.time}
+  }catch(e){console.error(e)}
+}
+function showPage(p,el){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');if(p==='mm'){mmLoadMods();mmLoadRp()}if(p==='ach'){renderAchPage();loadFavSet()}}
+document.getElementById('setMemory').oninput=function(){document.getElementById('setMemoryVal').innerText=this.value+'M'}
+async function chooseDir(){const d=await ipcRenderer.invoke('choose-game-dir');document.getElementById('setDir').innerText=d}
+document.getElementById('offlineName').addEventListener('input',function(){document.getElementById('avatarName').innerText=this.value||'Steve'})
+document.getElementById('offlineName').addEventListener('blur',async function(){const v=this.value.trim();if(v&&/^[a-zA-Z0-9_]{3,16}$/.test(v)){playerName=v;await ipcRenderer.invoke('save-settings',{playerName:v})}else if(v){toast('名字英文数字下划线3-16字符','error');this.value=playerName}})
+async function saveAllSettings(){maxMemory=parseInt(document.getElementById('setMemory').value);await ipcRenderer.invoke('save-settings',{playerName:document.getElementById('offlineName').value.trim()||'Steve',maxMemory,theme,customColor});toast('设置已保存','success')}
+async function yggdrasilLogin(){try{const r=await ipcRenderer.invoke('yggdrasil-login',{baseUrl:document.getElementById('ygUrl').value,username:document.getElementById('ygUser').value,password:document.getElementById('ygPass').value});document.getElementById('accountBadge').innerText='✓ '+r.name;toast('登录成功','success');unlockAch('first_login');document.getElementById('ygPass').value=''}catch(e){toast('登录失败: '+e.message,'error')}}
+function msLogin(){ipcRenderer.invoke('microsoft-login').then(r=>toast(r.message||'已打开浏览器','info')).catch(e=>toast('打开浏览器失败','error'))}
+async function searchRepo(){const q=document.getElementById('repoSearch').value.trim();const type=document.getElementById('repoType').value;const loader=document.getElementById('repoLoader').value;const filterVer=document.getElementById('repoVersion').value;const mainVer=document.getElementById('versionSelect').value;const box=document.getElementById('modResults');box.innerHTML='<div style="color:#666;padding:30px;text-align:center">搜索中...</div>';try{if(type==='modpack'){const list=await ipcRenderer.invoke('search-modpacks',q);box.innerHTML='';if(!list.length){box.innerHTML='<div style="color:#666;padding:30px;text-align:center">没找到整合包</div>';return}list.forEach(m=>{const div=document.createElement('div');div.className='mod-card';div.innerHTML=`<img src="${m.icon||''}"><div class="mod-card-info"><h4>${m.title}</h4><p>${m.description||''}</p><small style="color:#888">⬇ ${m.downloads||0}</small></div><button onclick="downloadModpack('${m.slug}','${mainVer}')">下载</button>`;box.appendChild(div)})}else{// 用仓库筛选版本，没选就用主版本；都没有就不按版本过滤
+  const mcVer=filterVer||mainVer;const validVer=mcVer&&!mcVer.includes('fabric')&&!mcVer.includes('forge')&&!mcVer.includes('──')?mcVer:'';const mods=await ipcRenderer.invoke('search-mods',{query:q,mcVersion:validVer,loader});box.innerHTML='';if(!mods.length){box.innerHTML='<div style="color:#666;padding:30px;text-align:center">没找到匹配的 Mod</div>';return}mods.forEach(m=>{if(!m.slug){box.innerHTML=`<div class="repo-tip">${m.title}: ${m.description}</div>`;return}const div=document.createElement('div');div.className='mod-card';div.innerHTML=`<img src="${m.icon||''}"><div class="mod-card-info"><h4>${m.title}</h4><p>${m.description||''}</p>${m.downloads?`<small style="color:#888">⬇ ${m.downloads}</small>`:''}</div><button onclick="downloadMod('${m.slug}','${validVer||mainVer}','${loader||'fabric'}')">下载</button>`;box.appendChild(div)})}}catch(e){box.innerHTML='<div style="color:#666;padding:30px;text-align:center">搜索失败: '+e.message+'</div>'}}
+async function downloadModpack(slug,mcVer){try{const f=await ipcRenderer.invoke('download-modpack',{slug,mcVersion:mcVer});toast('整合包已下载: '+f,'success');unlockAch('first_mod')}catch(e){toast('下载失败: '+e.message,'error')}}
+async function downloadMod(slug,mcVer,loader){try{const f=await ipcRenderer.invoke('download-mod',{slug,mcVersion:mcVer,loader});toast('Mod下载完成: '+f,'success');unlockAch('first_mod')}catch(e){toast('下载失败','error')}}
+async function installFabric(){const v=document.getElementById('versionSelect').value;if(!v||v.includes('fabric')||v.includes('forge')){toast('先选原版','warning');return}try{await ipcRenderer.invoke('install-fabric',v);toast('Fabric安装完成','success');unlockAch('fabric_install');loadVersions()}catch(e){toast('Fabric失败','error')}}
+let currentLoader=null;
+function selectLoader(which){
+  currentLoader=which;
+  document.querySelectorAll('.pcl-row').forEach(r=>r.classList.remove('selected'));
+  const map={fabric:'rowFabric',forge:'rowForge',neoforge:'rowNeoForge',optifine:'rowOptiFine'};
+  const row=document.getElementById(map[which]);
+  if(row)row.classList.add('selected');
+}
+// 统一展开/收起
+let selectedLoaderType=null;
+let selectedVersionInfo=null; // {type, ver, extra}
+function disableOtherLoaders(which){
+  ['fabric','forge','neoforge','optifine'].forEach(t=>{
+    if(t===which)return;
+    const rowId={fabric:'rowFabric',forge:'rowForge',neoforge:'rowNeoForge',optifine:'rowOptiFine'}[t];
+    const row=document.getElementById(rowId);
+    if(row){row.style.opacity='0.35';row.style.pointerEvents='none';}
+  });
+}
+function enableAllLoaders(){
+  ['fabric','forge','neoforge','optifine'].forEach(t=>{
+    const rowId={fabric:'rowFabric',forge:'rowForge',neoforge:'rowNeoForge',optifine:'rowOptiFine'}[t];
+    const row=document.getElementById(rowId);
+    if(row){row.style.opacity='';row.style.pointerEvents='';}
+  });
+}
+function showDownloadBtn(){
+  const btn=document.getElementById('startDownloadBtn');
+  if(selectedVersionInfo){
+    btn.style.display='block';
+    btn.textContent='⬇ 下载 '+selectedVersionInfo.label;
+  }else{
+    btn.style.display='none';
+  }
+}
+function selectLoaderVersion(type,ver,extra,label){
+  selectedLoaderType=type;
+  selectedVersionInfo={type,ver,extra,label};
+  disableOtherLoaders(type);
+  showDownloadBtn();
+  // 更新顶部显示
+  const mcVer=document.getElementById('versionSelect').value;
+  document.getElementById('currentVersionLabel').innerHTML=mcVer+'-'+label+' <span onclick="event.stopPropagation();clearSelection()" style="cursor:pointer;color:#e74c3c;font-size:16px;margin-left:8px" title="取消选择">✕</span>';
+}
+function clearSelection(){
+  selectedLoaderType=null;
+  selectedVersionInfo=null;
+  enableAllLoaders();
+  showDownloadBtn();
+  const mcVer=document.getElementById('versionSelect').value;
+  document.getElementById('currentVersionLabel').textContent=mcVer+'（原版）';
+  document.querySelectorAll('.pcl-list div').forEach(d=>d.style.background='');
+  // 收起所有展开的列表
+  document.querySelectorAll('.pcl-list').forEach(l=>l.style.display='none');
+  document.querySelectorAll('.pcl-row').forEach(r=>{r.classList.remove('open');r.style.background=''});
+}
+async function saveVersionAs(type,ver){
+  const mcVer=document.getElementById('versionSelect').value;
+  try{
+    const r=await ipcRenderer.invoke('save-installer-to',mcVer,type,ver);
+    if(r)toast('已保存到: '+r,'success');
+  }catch(e){toast('保存失败: '+e.message,'error')}
+}
+async function startDownloadSelected(){
+  if(!selectedVersionInfo){toast('请先选一个加载器版本','warning');return}
+  const v=document.getElementById('versionSelect').value;
+  const {type,ver,extra}=selectedVersionInfo;
+  const btn=document.getElementById('startDownloadBtn');
+  btn.disabled=true;btn.textContent='⏳ 正在下载安装...';
+  try{
+    if(type==='fabric'){await ipcRenderer.invoke('install-fabric',v,ver);toast('Fabric '+ver+' 安装完成','success');unlockAch('fabric_install')}
+    else if(type==='forge'){await ipcRenderer.invoke('install-forge-version',v,ver);toast('Forge '+ver+' 安装完成','success');unlockAch('forge_install')}
+    else if(type==='neoforge'){await ipcRenderer.invoke('install-neoforge-version',v,ver);toast('NeoForge '+ver+' 安装完成','success')}
+    else if(type==='optifine'){await ipcRenderer.invoke('install-optifine-version',v,extra.type,extra.patch);toast('OptiFine 安装完成','success')}
+    loadVersions();
+    document.getElementById('loaderCard').style.display='none';
+  }catch(e){toast('安装失败: '+e.message,'error')}
+  btn.disabled=false;
+  showDownloadBtn();
+}
+function toggleLoader(name){
+  const rowMap={fabric:['rowFabric','fabricList'],forge:['rowForge','forgeList'],neoforge:['rowNeoForge','neoforgeList'],optifine:['rowOptiFine','optifineList']};
+  const [rowId,listId]=rowMap[name];
+  const row=document.getElementById(rowId);
+  const list=document.getElementById(listId);
+  const isOpen=list.style.display==='block';
+  // 先关掉所有
+  document.querySelectorAll('.pcl-list').forEach(l=>l.style.display='none');
+  document.querySelectorAll('.pcl-row').forEach(r=>{r.classList.remove('open');r.style.background=''});
+  if(!isOpen){
+    list.style.display='block';
+    row.classList.add('open');
+    row.style.background='rgba(52,152,219,.10)';
+    openLoaderType=name;
+    if(name==='fabric')loadFabricVersions();
+    else if(name==='forge')loadForgeVersions();
+    else if(name==='neoforge')loadNeoForgeVersions();
+    else if(name==='optifine')loadOptiFineVersions();
+  }else{
+    openLoaderType=null;
+    row.style.background='';
+  }
+}
+async function loadFabricVersions(){
+  const v=document.getElementById('versionSelect').value;
+  if(!v||v.includes('fabric')){document.getElementById('fabricList').innerHTML='<div style="color:#666;padding:10px;text-align:center">请先选原版版本</div>';return}
+  const listEl=document.getElementById('fabricList');
+  let loaders=loaderCache.fabric;
+  if(!loaders){
+    listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载中...</div>';
+    try{loaders=await ipcRenderer.invoke('get-fabric-loaders',v);loaderCache.fabric=loaders;}catch(e){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载失败</div>';return}
+  }
+  listEl.innerHTML='';
+  if(!loaders||!loaders.length){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">无可用版本</div>';document.getElementById('fabricBadge').textContent='无';return}
+  document.getElementById('fabricBadge').textContent='可以添加';
+  loaders.forEach((l,i)=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;border-radius:6px';
+    div.onmouseenter=()=>div.style.background='#1a1d24';
+    div.onmouseleave=()=>div.style.background='';
+    div.innerHTML=`<span>📦</span><div style="flex:1"><div style="color:#e0e0e0;font-size:14px">${l.version}</div><div style="color:#666;font-size:12px">${i===0?'稳定版':'测试版'}</div></div><span onclick="event.stopPropagation();saveVersionAs('fabric','${l.version}')" style="color:#888;cursor:pointer;font-size:14px" title="另存为">💾</span>`;
+    div.onclick=()=>{selectLoaderVersion('fabric',l.version,null,'Fabric '+l.version);document.querySelectorAll('#fabricList div').forEach(d=>d.style.background='');div.style.background='rgba(52,152,219,.15)'};
+    listEl.appendChild(div);
+  });
+}
+// Forge 版本列表
+async function loadForgeVersions(){
+  const v=document.getElementById('versionSelect').value;
+  if(!v||v.includes('forge')||v.includes('fabric')){document.getElementById('forgeList').innerHTML='<div style="color:#666;padding:10px;text-align:center">请先选原版版本</div>';return}
+  const listEl=document.getElementById('forgeList');
+  let builds=loaderCache.forge;
+  if(!builds){
+    listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载中...</div>';
+    try{builds=await ipcRenderer.invoke('get-forge-builds',v);loaderCache.forge=builds;}catch(e){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载失败</div>';return}
+  }
+  listEl.innerHTML='';
+  if(!builds||!builds.length){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">该版本无 Forge</div>';document.getElementById('forgeBadge').textContent='无';return}
+  document.getElementById('forgeBadge').textContent='可以添加';
+  builds.slice().reverse().forEach(b=>{
+    const ver=b.version;
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;border-radius:6px';
+    div.onmouseenter=()=>div.style.background='#1a1d24';
+    div.onmouseleave=()=>div.style.background='';
+    div.innerHTML=`<span>🧱</span><div><div style="color:#e0e0e0;font-size:14px">${ver}</div><div style="color:#666;font-size:12px">build ${b.build}</div></div>`;
+    div.onclick=()=>{selectLoaderVersion('forge',ver,null,'Forge '+ver);document.querySelectorAll('#forgeList div').forEach(d=>d.style.background='');div.style.background='rgba(52,152,219,.15)'};
+    listEl.appendChild(div);
+  });
+}
+async function installForgeWithVersion(mcVer,forgeVer){toast('正在安装 Forge '+forgeVer+'...','info');try{await ipcRenderer.invoke('install-forge-version',mcVer,forgeVer);selectedLoaderType='forge';disableOtherLoaders('forge');toast('Forge '+forgeVer+' 安装完成','success');unlockAch('forge_install');loadVersions()}catch(e){toast('Forge失败: '+e.message,'error')}}
+// NeoForge 版本列表
+async function loadNeoForgeVersions(){
+  const v=document.getElementById('versionSelect').value;
+  if(!v||v.includes('forge')||v.includes('fabric')){document.getElementById('neoforgeList').innerHTML='<div style="color:#666;padding:10px;text-align:center">请先选原版版本</div>';return}
+  const listEl=document.getElementById('neoforgeList');
+  let builds=loaderCache.neoforge;
+  if(!builds){
+    listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载中...</div>';
+    try{builds=await ipcRenderer.invoke('get-neoforge-builds',v);loaderCache.neoforge=builds;}catch(e){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载失败</div>';return}
+  }
+  listEl.innerHTML='';
+  if(!builds||!builds.length){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">该版本无 NeoForge</div>';document.getElementById('neoforgeBadge').textContent='无';return}
+  document.getElementById('neoforgeBadge').textContent='可以添加';
+  builds.slice().reverse().forEach(ver=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;border-radius:6px';
+    div.onmouseenter=()=>div.style.background='#1a1d24';
+    div.onmouseleave=()=>div.style.background='';
+    div.innerHTML=`<span>🔧</span><div><div style="color:#e0e0e0;font-size:14px">${ver}</div></div>`;
+    div.onclick=()=>{selectLoaderVersion('neoforge',ver,null,'NeoForge '+ver);document.querySelectorAll('#neoforgeList div').forEach(d=>d.style.background='');div.style.background='rgba(52,152,219,.15)'};
+    listEl.appendChild(div);
+  });
+}
+async function installNeoForgeWithVersion(mcVer,neoVer){toast('正在安装 NeoForge '+neoVer+'...','info');try{await ipcRenderer.invoke('install-neoforge-version',mcVer,neoVer);selectedLoaderType='neoforge';disableOtherLoaders('neoforge');toast('NeoForge '+neoVer+' 安装完成','success');loadVersions()}catch(e){toast('NeoForge失败: '+e.message,'error')}}
+// OptiFine 版本列表
+async function loadOptiFineVersions(){
+  const v=document.getElementById('versionSelect').value;
+  if(!v||v.includes('forge')||v.includes('fabric')||v.includes('optifine')){document.getElementById('optifineList').innerHTML='<div style="color:#666;padding:10px;text-align:center">请先选原版版本</div>';return}
+  const listEl=document.getElementById('optifineList');
+  let list=loaderCache.optifine;
+  if(!list){
+    listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载中...</div>';
+    try{list=await ipcRenderer.invoke('get-optifine-versions',v);loaderCache.optifine=list;}catch(e){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">加载失败</div>';return}
+  }
+  listEl.innerHTML='';
+  if(!list||!list.length){listEl.innerHTML='<div style="color:#666;padding:10px;text-align:center">该版本无 OptiFine</div>';document.getElementById('optifineBadge').textContent='无';return}
+  document.getElementById('optifineBadge').textContent='可以添加';
+  list.forEach(item=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;border-radius:6px';
+    div.onmouseenter=()=>div.style.background='#1a1d24';
+    div.onmouseleave=()=>div.style.background='';
+    div.innerHTML=`<span>🔍</span><div><div style="color:#e0e0e0;font-size:14px">OptiFine ${item.type} ${item.patch}</div><div style="color:#666;font-size:12px">${item.mcVersion}</div></div>`;
+    div.onclick=()=>{selectLoaderVersion('optifine',null,{type:item.type,patch:item.patch},'OptiFine '+item.type+' '+item.patch);document.querySelectorAll('#optifineList div').forEach(d=>d.style.background='');div.style.background='rgba(52,152,219,.15)'};
+    listEl.appendChild(div);
+  });
+}
+async function installOptiFineWithVersion(mcVer,type,patch){toast('正在安装 OptiFine '+type+' '+patch+'...','info');try{await ipcRenderer.invoke('install-optifine-version',mcVer,type,patch);selectedLoaderType='optifine';disableOtherLoaders('optifine');toast('OptiFine 安装完成','success');loadVersions()}catch(e){toast('OptiFine失败: '+e.message,'error')}}
+async function installFabricWithVersion(loaderVer){
+  const v=document.getElementById('versionSelect').value;
+  if(!v||v.includes('fabric')||v.includes('forge')){toast('先选原版','warning');return}
+  if(!loaderVer){toast('请选版本','warning');return}
+  toast('正在安装 Fabric '+loaderVer+'...','info');
+  try{
+    await ipcRenderer.invoke('install-fabric',v,loaderVer);
+    selectedLoaderType='fabric';disableOtherLoaders('fabric');
+    toast('Fabric '+loaderVer+' 安装完成','success');
+    unlockAch('fabric_install');
+    loadVersions();
+  }catch(e){toast('Fabric失败: '+e.message,'error')}
+}
+let lastVersion='';
+function onVersionPick(){
+  const v=document.getElementById('versionSelect').value;
+  const c=document.getElementById('loaderCard');
+  selectedLoaderType=null;
+  enableAllLoaders();
+  if(v&&!/^(forge|fabric|neoforge|optifine)/i.test(v)){
+    c.style.display='block';
+    document.getElementById('versionList').style.display='none';
+    document.getElementById('currentVersionLabel').textContent=v;
+    // 并行查各加载器状态
+    fetchLoaderStatus(v);
+  }else{
+    c.style.display='none';
+    document.getElementById('versionList').style.display='block';
+  }
+}
+function backToVersionList(){
+  document.getElementById('loaderCard').style.display='none';
+  document.getElementById('versionList').style.display='block';
+  selectedLoaderType=null;
+  selectedVersionInfo=null;
+  enableAllLoaders();
+  loaderCache={fabric:null,forge:null,neoforge:null,optifine:null};
+  showDownloadBtn();
+  // 重置下拉框和版本列表选中，这样重新选同一个版本也会触发
+  document.getElementById('versionSelect').value='';
+  document.querySelectorAll('.pcl-ver-row').forEach(x=>x.classList.remove('selected'));
+}
+let loaderCache={fabric:null,forge:null,neoforge:null,optifine:null};
+let openLoaderType=null;
+async function fetchLoaderStatus(mcVer){
+  const badges={fabric:document.getElementById('fabricBadge'),forge:document.getElementById('forgeBadge'),neoforge:document.getElementById('neoforgeBadge'),optifine:document.getElementById('optifineBadge')};
+  Object.values(badges).forEach(b=>{if(b)b.textContent='获取中……'});
+  const withTimeout=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms))]);
+  const update=(type,d)=>{
+    loaderCache[type]=d;
+    const badge=badges[type];
+    if(badge){
+      if(d&&d.length)badge.textContent='可以添加';
+      else if(type==='neoforge')badge.textContent='仅支持1.20.1+';
+      else if(type==='optifine')badge.textContent='该版本暂无';
+      else badge.textContent='无';
+    }
+    // 如果当前正展开这个加载器的列表，刷新它
+    if(openLoaderType===type){
+      if(type==='fabric')loadFabricVersions();
+      else if(type==='forge')loadForgeVersions();
+      else if(type==='neoforge')loadNeoForgeVersions();
+      else if(type==='optifine')loadOptiFineVersions();
+    }
+  };
+  withTimeout(ipcRenderer.invoke('get-fabric-loaders',mcVer).catch(()=>null),8000).then(d=>update('fabric',d));
+  withTimeout(ipcRenderer.invoke('get-forge-builds',mcVer).catch(()=>null),8000).then(d=>update('forge',d));
+  withTimeout(ipcRenderer.invoke('get-neoforge-builds',mcVer).catch(()=>null),10000).then(d=>update('neoforge',d));
+  withTimeout(ipcRenderer.invoke('get-optifine-versions',mcVer).catch(()=>null),8000).then(d=>update('optifine',d));
+}
+document.addEventListener('click',function(e){const c=document.getElementById('loaderCard');if(!c)return;if(e.target.closest('#loaderCard')||e.target.closest('#versionSelect')||e.target.closest('.refresh-btn')||e.target.closest('.pcl-ver-row'))return;c.style.display='none'});
+function launchVanilla(){document.getElementById('loaderCard').style.display='none';launch()}
+function selectLoader(type){document.getElementById('loaderNone').style.border='1px solid #333';document.getElementById('loaderNone').style.background='#0f1115';if(type==='none'){document.getElementById('loaderNone').style.border='1px solid #2ecc71';document.getElementById('loaderNone').style.background='rgba(255,255,255,.08)';document.getElementById('loaderCard').style.display='none'}}
+async function preloadAll(){toast('正在预下载加载器安装包...','info');try{const r=await ipcRenderer.invoke('preload-all-installers');toast(r,'success')}catch(e){toast('预下载失败','error')}}
+async function installNeoForge(){toast('NeoForge 安装中...','info');try{const r=await ipcRenderer.invoke('install-neoforge',document.getElementById('versionSelect').value);toast('NeoForge 安装完成','success');loadVersions()}catch(e){toast('NeoForge失败: '+e.message,'error')}}
+async function installOptiFine(){toast('OptiFine 安装中...','info');try{const r=await ipcRenderer.invoke('install-optifine',document.getElementById('versionSelect').value);toast('OptiFine 安装完成','success');loadVersions()}catch(e){toast('OptiFine失败: '+e.message,'error')}}
+async function installForge(){const v=document.getElementById('versionSelect').value;if(!v||v.includes('forge')||v.includes('fabric')){toast('先选原版','warning');return}try{await ipcRenderer.invoke('install-forge',v);toast('Forge安装完成','success');unlockAch('forge_install');loadVersions()}catch(e){toast('Forge失败: '+e.message,'error');console.error(e)}}
+async function uninstall(){const v=document.getElementById('versionSelect').value;if(!v)return;if(!confirm('卸载'+v+'?'))return;await ipcRenderer.invoke('uninstall-version',v);loadVersions()}
+async function cancelDownload(){if(confirm('取消下载?')){await ipcRenderer.invoke('cancel-download');document.getElementById('launchBtn').disabled=false;document.getElementById('progressWrap').classList.remove('active')}}
+async function launch(){
+  const sel=document.getElementById('versionSelect');
+  const opt=sel.options[sel.selectedIndex];
+  const v=opt?opt.textContent.replace(/^[✅⬇️📦]+\s*/,'').trim():'';
+  if(!v||v===''||v==='加载中...'||v==='选择版本...'||v.includes('──')){toast('请先等版本列表加载完，再选一个版本','warning');return}
+  const name=document.getElementById('offlineName').value.trim()
+  if(authMode==='offline'){if(!name){toast('请输入名字','warning');return}if(!/^[a-zA-Z0-9_]{3,16}$/.test(name)){toast('名字英文数字下划线','error');return}await ipcRenderer.invoke('save-settings',{playerName:name})}
+  document.getElementById('launchBtn').disabled=true;document.getElementById('status').innerHTML='<span class="spinner"></span>启动中...';document.getElementById('progressWrap').classList.add('active');document.getElementById('progressFill').style.width='0%'
+  let retry=0
+  while(retry<3){
+    try{await ipcRenderer.invoke('launch-game',v);break}
+    catch(e){retry++;if(retry>=3){toast('启动失败: '+e.message,'error');break}toast('第'+retry+'次失败,自动重试...','warning');await new Promise(r=>setTimeout(r,2000))}
+  }
+  unlockAch('first_launch')
+  document.getElementById('status').innerText='游戏已关闭';document.getElementById('progressWrap').classList.remove('active');document.getElementById('launchBtn').disabled=false
+}
+let logBuffer='',logTimer=null;
+const LOG_MAX=400; // 最多保留400行，防止DOM无限堆积
+// 高效日志渲染：只追加新行，不整块重排，超过上限删最旧的
+function appendLogLines(text){
+  const b=document.getElementById('logBox');
+  if(!b)return;
+  const lines=String(text).split('\n');
+  const frag=document.createDocumentFragment();
+  lines.forEach(line=>{
+    if(!line)return;
+    const d=document.createElement('div');
+    d.textContent=line;
+    frag.appendChild(d);
+  });
+  if(frag.childNodes.length){
+    b.appendChild(frag);
+    while(b.childNodes.length>LOG_MAX)b.removeChild(b.firstChild);
+    b.scrollTop=b.scrollHeight;
+  }
+}
+ipcRenderer.on('game-log',(e,l)=>{logBuffer+=l+'\n';if(!logTimer){logTimer=setTimeout(()=>{appendLogLines(logBuffer);logBuffer='';logTimer=null},200)}if(l.includes('Setting user')||l.includes('LWJGL')||l.includes('OpenAL')){document.getElementById('progressWrap').classList.remove('active');document.getElementById('status').innerText='游戏运行中...'}})
+ipcRenderer.on('download-progress',(e,p)=>{const t=p.total||0,d=p.progress||0;if(t>0){const pct=Math.min(100,Math.round(d/t*100));document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').innerText=pct>=100?'✓完成':'下载中 '+d+'/'+t;
+  document.getElementById('taskTotalPct').textContent=pct+'%';
+  document.getElementById('taskTotalBar').style.width=pct+'%';
+  document.getElementById('taskRemaining').textContent=t-d;
+}})
+function formatSpeed(b){if(b>1e6)return(b/1e6).toFixed(1)+' MB/s';if(b>1e3)return(b/1e3).toFixed(0)+' KB/s';return b+' B/s'}
+async function importModpack(e){
+  e.preventDefault();
+  const f=e.dataTransfer.files[0];
+  if(!f)return;
+  const name=f.name.toLowerCase();
+  if(name.endsWith('.mrpack')){
+    toast('正在导入 Modrinth 整合包...','info');
+    try{await ipcRenderer.invoke('import-mrpack',f.path);toast('整合包导入完成','success');loadVersions()}catch(err){toast('导入失败: '+err.message,'error')}
+  }else if(name.endsWith('.zip')){
+    toast('正在解压整合包...','info');
+    try{await ipcRenderer.invoke('import-zip-modpack',f.path);toast('整合包导入完成','success');loadVersions()}catch(err){toast('导入失败: '+err.message,'error')}
+  }else if(name.endsWith('.jar')){
+    mmImportMod(f.path);
+  }else{toast('不支持的格式','warning')}
+}
+function chooseJava(){ipcRenderer.invoke('choose-java-path').then(p=>{if(p)document.getElementById('setJava').value=p})}
+function openGameDir(){ipcRenderer.invoke('open-game-dir')}
+function openScreenshots(){ipcRenderer.invoke('open-screenshots')}
+async function clearCache(){if(confirm('清理下载缓存？已下载的版本不会删')){await ipcRenderer.invoke('clear-cache');toast('缓存已清理','success')}}
+async function quickJoinServer(){
+  const ip=document.getElementById('quickServer').value.trim();
+  if(!ip){toast('输入服务器IP','warning');return}
+  const v=document.getElementById('versionSelect').value;
+  try{
+    await ipcRenderer.invoke('launch-with-server',v,ip);
+    document.getElementById('launchBtn').disabled=true;
+  }catch(e){toast('启动失败: '+e.message,'error')}
+}
+ipcRenderer.on('game-started',()=>{document.getElementById('progressWrap').classList.remove('active');document.getElementById('launchBtn').disabled=false;document.getElementById('launchBtn').innerText='启动游戏';document.getElementById('status').innerText='🎮 游戏运行中...'})
+
+function mmSwitchTab(t){document.querySelectorAll('.mm-tab').forEach((el,i)=>el.classList.toggle('active',(el.textContent.includes('Mod')&&t==='mod')||(el.textContent.includes('材质')&&t==='rp')||(el.textContent.includes('光影')&&t==='shader')||(el.textContent.includes('数据包')&&t==='datapack')));document.getElementById('mmToolbarMod').style.display=t==='mod'?'flex':'none';document.getElementById('mmToolbarRp').style.display=t==='rp'?'flex':'none';document.getElementById('mmToolbarShader').style.display=t==='shader'?'flex':'none';document.getElementById('mmToolbarDatapack').style.display=t==='datapack'?'flex':'none';document.getElementById('mmModList').style.display=t==='mod'?'block':'none';document.getElementById('mmRpList').style.display=t==='rp'?'block':'none';document.getElementById('mmShaderList').style.display=t==='shader'?'block':'none';document.getElementById('mmDatapackList').style.display=t==='datapack'?'block':'none';if(t==='shader')mmLoadShader();if(t==='datapack')mmLoadDatapack()}
+async function mmLoadMods(){mmMods=await ipcRenderer.invoke('get-mods-detail');mmRender()}
+function mmRender(){const box=document.getElementById('mmModList');box.innerHTML='';const q=(document.getElementById('mmSearch').value||'').toLowerCase();const lf=document.getElementById('mmLoaderFilter').value;const sf=document.getElementById('mmStatusFilter').value;let list=mmMods.filter(m=>{if(q&&!m.name.toLowerCase().includes(q))return false;if(lf!=='all'&&m.loader!==lf)return false;if(sf==='on'&&!m.enabled)return false;if(sf==='off'&&m.enabled)return false;return true});
+list.sort((a,b)=>(b.fav||0)-(a.fav||0));
+if(!list.length){box.innerHTML='<div style="color:#666;padding:30px;text-align:center">没有Mod<br><small>拖 JAR 文件到上方虚线框即可导入</small></div>';return}
+list.forEach(m=>{const div=document.createElement('div');div.className='mm-item'+(m.enabled?'':' disabled');div.innerHTML=`<div class="mm-item-info"><h4>${m.fav?'❤️ ':''}${m.name}</h4><p><span class="mm-badge ${m.loader.toLowerCase()}">${m.loader}</span>${m.version?'<span class="mm-badge" style="background:rgba(255,193,71,.2);color:#ffc147">v'+m.version+'</span>':''}<span class="mm-badge ${m.enabled?'on':'off'}">${m.enabled?'启用':'禁用'}</span></p></div><button class="small-btn" onclick="mmToggleFav('${m.file}',this)">${m.fav?'❤️':'🤍'}</button><button class="small-btn" onclick="mmToggleMod('${m.file}')">${m.enabled?'禁用':'启用'}</button><button class="small-btn" style="color:#ef4444" onclick="mmDelMod('${m.file}')">删除</button>`;box.appendChild(div)})}
+async function mmToggleFav(file,btn){const ts=await ipcRenderer.invoke('toggle-mod-fav',file);btn.textContent=ts?'❤️':'🤍';mmLoadMods()}
+async function mmToggleMod(f){await ipcRenderer.invoke('toggle-mod',f);mmLoadMods()}
+async function mmDelMod(f){if(!confirm('删除?'))return;await ipcRenderer.invoke('delete-mod',f);mmLoadMods()}
+async function mmImportMod(){const n=await ipcRenderer.invoke('import-mod-file');if(n>0){toast('导入'+n+'个Mod','success');unlockAch('first_mod');mmLoadMods()}}
+async function mmLoadRp(){mmPacks=await ipcRenderer.invoke('get-resourcepacks');mmRenderRp()}
+function mmRenderRp(){const box=document.getElementById('mmRpList');box.innerHTML='';const q=(document.getElementById('mmSearchRp').value||'').toLowerCase();let list=mmPacks.filter(p=>!q||p.name.toLowerCase().includes(q));if(!list.length){box.innerHTML='<div style="color:#666;padding:30px;text-align:center">没有材质包</div>';return}list.forEach(p=>{const div=document.createElement('div');div.className='mm-item';div.innerHTML=`<div class="mm-item-info"><h4>${p.name}</h4><p>${p.desc||p.file}</p></div><button class="small-btn" style="color:#ef4444" onclick="mmDelRp('${p.file}')">删除</button>`;box.appendChild(div)})}
+async function mmDelRp(f){if(!confirm('删除?'))return;await ipcRenderer.invoke('delete-resourcepack',f);mmLoadRp()}
+async function mmImportRp(){const n=await ipcRenderer.invoke('import-resourcepack');if(n>0){toast('导入'+n+'个材质包','success');mmLoadRp()}}
+let mmShaders=[];
+async function mmLoadShader(){mmShaders=await ipcRenderer.invoke('get-shaders');mmRenderShader()}
+function mmRenderShader(){const box=document.getElementById('mmShaderList');box.innerHTML='';const q=(document.getElementById('mmSearchShader').value||'').toLowerCase();let list=mmShaders.filter(p=>!q||p.name.toLowerCase().includes(q));if(!list.length){box.innerHTML='<div style="color:#666;padding:30px;text-align:center">没有光影包<br><small>需要先装 OptiFine 或 Iris Shaders mod</small></div>';return}list.forEach(p=>{const div=document.createElement('div');div.className='mm-item';div.innerHTML=`<div class="mm-item-info"><h4>${p.name}</h4><p>✨ 光影包</p></div><button class="small-btn" style="color:#ef4444" onclick="mmDelShader('${p.file}')">删除</button>`;box.appendChild(div)})}
+async function mmDelShader(f){if(!confirm('删除?'))return;await ipcRenderer.invoke('delete-shader',f);mmLoadShader()}
+async function mmImportShader(){const n=await ipcRenderer.invoke('import-shader');if(n>0){toast('导入'+n+'个光影包','success');mmLoadShader()}}
+let mmDatapacks=[];
+async function mmLoadDatapack(){mmDatapacks=await ipcRenderer.invoke('get-datapacks');mmRenderDatapack()}
+function mmRenderDatapack(){const box=document.getElementById('mmDatapackList');box.innerHTML='';const q=(document.getElementById('mmSearchDatapack').value||'').toLowerCase();let list=mmDatapacks.filter(p=>!q||p.name.toLowerCase().includes(q));if(!list.length){box.innerHTML='<div style="color:#666;padding:30px;text-align:center">没有数据包<br><small>数据包放在存档的 datapacks 文件夹里生效</small></div>';return}list.forEach(p=>{const div=document.createElement('div');div.className='mm-item';div.innerHTML=`<div class="mm-item-info"><h4>${p.name}</h4><p>🗃️ 数据包</p></div><button class="small-btn" style="color:#ef4444" onclick="mmDelDatapack('${p.file}')">删除</button>`;box.appendChild(div)})}
+async function mmDelDatapack(f){if(!confirm('删除?'))return;await ipcRenderer.invoke('delete-datapack',f);mmLoadDatapack()}
+async function mmImportDatapack(){const n=await ipcRenderer.invoke('import-datapack');if(n>0){toast('导入'+n+'个数据包','success');mmLoadDatapack()}}
+
+// 拖拽导入
+(function(){const dz=document.getElementById('dropZone');if(!dz)return;['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.background='rgba(46,204,113,.1)';dz.style.borderColor='#2ecc71'}));['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.background='';dz.style.borderColor=''}));dz.addEventListener('drop',async e=>{const files=Array.from(e.dataTransfer.files).map(f=>f.path).filter(p=>p&&/\.(jar|zip)$/i.test(p));if(!files.length){toast('只支持 JAR/ZIP 文件','warning');return}const n=await ipcRenderer.invoke('import-mod-files',files);toast('导入'+n+'个Mod','success');mmLoadMods()})})();
+
+const audio=document.getElementById('audioPlayer');audio.volume=0.8
+function playTrack(i,seekTime){currentTrack=i;const t=musicList[i];if(!t)return;audio.src=t.path;audio.playbackRate=parseFloat(document.querySelector('.speed-btn.active').dataset.speed);audio.play();if(seekTime)audio.currentTime=seekTime;document.getElementById('musicTitle').innerText=t.name;document.getElementById('playPauseBtn').innerText='⏸';renderMusicPage();saveMusicState();unlockAch('first_music')}
+function togglePlay(){if(!musicList.length)return;if(audio.paused){if(!audio.src)playTrack(0);else audio.play();document.getElementById('playPauseBtn').innerText='⏸'}else{audio.pause();document.getElementById('playPauseBtn').innerText='▶'}}
+function prevTrack(){if(musicList.length)playTrack((currentTrack-1+musicList.length)%musicList.length)}
+function nextTrack(){if(!musicList.length)return;playTrack((currentTrack+1)%musicList.length)}
+function setSpeed(spd,btn){audio.playbackRate=spd;document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
+function toggleLoop(){loopMode=(loopMode+1)%3;const btn=document.getElementById('loopBtn');btn.innerText=loopMode===0?'🔁':loopMode===1?'🔂':'➡️'}
+function setVolume(v){audio.volume=v/100}
+function saveMusicState(){ipcRenderer.invoke('save-music-state',{index:currentTrack,time:audio.currentTime||0})}
+audio.addEventListener('ended',()=>{if(loopMode===1){audio.currentTime=0;audio.play()}else nextTrack()})
+audio.addEventListener('timeupdate',()=>{if(audio.duration)document.getElementById('musicProgressFill').style.width=(audio.currentTime/audio.duration*100)+'%'})
+setInterval(saveMusicState,5000);window.addEventListener('beforeunload',saveMusicState)
+function seekMusic(e){if(!audio.duration)return;const rect=e.currentTarget.getBoundingClientRect();audio.currentTime=(e.clientX-rect.left)/rect.width*audio.duration}
+
+/* ===== 简易/完整模式切换 ===== */
+function applyMode(){
+  const simple=document.body.classList.contains('simple-ui');
+  document.getElementById('modeLabel').innerText=simple?'简易':'完整';
+  document.getElementById('modeSwitch').style.opacity=simple?'.8':'1';
+}
+function toggleMode(){
+  document.body.classList.toggle('simple-ui');
+  const simple=document.body.classList.contains('simple-ui');
+  localStorage.setItem('starrabbit_simple',simple?'1':'0');
+  applyMode();
+  toast(simple?'已切换到简易模式（只保留启动核心）':'已切换到完整模式（全部功能）','info');
+}
+// 简易模式下，隐藏导航高级项后如果当前不在主页，自动跳回主页
+document.addEventListener('click',function(e){
+  if(document.body.classList.contains('simple-ui')&&e.target.closest('.nav-item:not([data-home])')){
+    e.stopPropagation();e.preventDefault();toast('简易模式下请先用完整版访问该功能','warning');return false;
+  }
+},true);
+
+/* ===== 一键预下载：全版本列表 + 热门安装包 ===== */
+function onConcurrencyChange(){
+  const v=document.getElementById('dlConcurrency').value;
+  document.getElementById('customConcurrency').style.display=v==='custom'?'inline-block':'none';
+}
+function getConcurrency(){
+  const v=document.getElementById('dlConcurrency').value;
+  if(v==='custom'){
+    let n=parseInt(document.getElementById('customConcurrency').value)||5;
+    n=Math.max(1,Math.min(32,n));
+    return n;
+  }
+  return parseInt(v)||5;
+}
+// 监听主进程的下载进度
+// preload 进度也做节流：150ms 内合并多次更新
+let preloadThrottle=null,preloadLast=null;
+ipcRenderer.on('preload-progress',(e,p)=>{
+  preloadLast=p;
+  if(preloadThrottle)return;
+  preloadThrottle=setTimeout(()=>{
+    preloadThrottle=null;
+    const box=document.getElementById('preloadProgress');
+    if(!box||!preloadLast)return;
+    const p=preloadLast;
+    box.style.display='block';
+    document.getElementById('preloadProgressText').innerText=`${p.done}/${p.total}`;
+    document.getElementById('preloadProgressPct').innerText=p.percent+'%';
+    document.getElementById('preloadProgressBar').style.width=p.percent+'%';
+    document.getElementById('preloadCurrent').innerText=p.current?('正在下: '+p.current):'';
+  },150);
+});
+async function refreshCacheStatus(){
+  try{
+    const c=await ipcRenderer.invoke('get-cached-installers');
+    const el=document.getElementById('cacheStatus');
+    if(!el)return;
+    el.innerText=`已缓存：Fabric ${c.fabric.length} 个 / Forge ${c.forge.length} 个 / NeoForge ${c.neoforge.length} 个 / 元数据 ${c.meta.length} 个`;
+  }catch(e){}
+}
+async function preloadAllInstallers(){
+  const concurrency=getConcurrency();
+  const btn=document.getElementById('preloadCacheBtn');
+  btn.disabled=true;
+  btn.textContent='⏳ 第1步/2步：下载全版本列表...';
+  try{
+    await ipcRenderer.invoke('preload-all-loader-metadata');
+    btn.textContent='⏳ 第2步/2步：'+concurrency+' 路并发下载...';
+    const r=await ipcRenderer.invoke('preload-popular-installers',{concurrency});
+    toast(`预下载完成：Fabric ${r.fabric}、Forge ${r.forge}、NeoForge ${r.neoforge}、跳过 ${r.skipped}、失败 ${r.failed}`,'success');
+  }catch(e){toast('预下载失败: '+e.message,'error')}
+  btn.disabled=false;
+  btn.textContent='💾 一键预下载安装包';
+  refreshCacheStatus();
+}
+
+/* 把版本列表填充到 Mod 仓库的版本筛选下拉 */
+function fillRepoVersionList(){
+  const sel=document.getElementById('repoVersion');
+  if(!sel||sel.options.length>1)return;
+  // 取常见稳定版
+  const common=['1.21.4','1.21.1','1.20.6','1.20.4','1.20.1','1.19.4','1.19.2','1.18.2','1.16.5','1.12.2'];
+  common.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});
+}
+
+init()
+</script>
+<script>
+let starAnim=null;
+function startStars(){
+  const c=document.getElementById('bgCanvas');c.style.display='block';startStars._running=true;const ctx=c.getContext('2d');
+  c.width=innerWidth;c.height=innerHeight;
+  const stars=Array.from({length:200},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.5+0.3,a:Math.random(),s:Math.random()*0.02+0.005}));
+  cancelAnimationFrame(starAnim);
+  (function draw(){
+    ctx.fillStyle='rgba(15,17,21,1)';ctx.fillRect(0,0,c.width,c.height);
+    stars.forEach(s=>{s.a+=s.s;if(s.a>1||s.a<0)s.s*=-1;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${Math.abs(s.a)})`;ctx.fill();});
+    starAnim=requestAnimationFrame(draw);
+  })();
+}
+function stopStars(){cancelAnimationFrame(starAnim);var c=document.getElementById('bgCanvas');if(c){var ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);c.style.display='none'}startStars._running=false}
+function setBg(mode){
+  if(mode==='stars'){stopStars();startStars();document.body.style.background='';document.getElementById('wpVideo').style.display='none';document.getElementById('wpOverlay').style.display='none'}
+  else if(mode==='default'){stopStars();document.body.style.background='';document.getElementById('wpVideo').style.display='none';document.getElementById('wpOverlay').style.display='none';wpUrl=null}
+  else if(mode==='custom'){document.getElementById('bgFile').click()}
+}
+var wpUrl=null;
+function setCustomBg(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    wpUrl=e.target.result;
+    stopStars();
+    document.getElementById('wpVideo').style.display='none';
+    document.getElementById('wpOverlay').style.display='none';
+    try{localStorage.setItem('wp',wpUrl)}catch(err){}
+    wpApply();
+  };
+  r.readAsDataURL(f);
+}
+function wpApply(){
+  var op=document.getElementById('wpOp').value;
+  document.getElementById('wpOpVal').textContent=op+'%';
+  try{localStorage.setItem('wpOp',op)}catch(e){}
+  if(wpUrl){
+    document.body.style.background='linear-gradient(rgba(20,25,35,'+(op/100)+'),rgba(20,25,35,'+(op/100)+')),url('+wpUrl+') center/cover no-repeat fixed';
+  }
+}
+function setVideoWallpaper(input){
+  var f=input.files[0];if(!f)return;
+  var v=document.getElementById('wpVideo');
+  v.src=URL.createObjectURL(f);
+  v.style.display='block';
+  stopStars();
+  wpUrl=null;
+  document.body.style.background='';
+  try{localStorage.removeItem('wp')}catch(e){}
+  var ov=document.getElementById('wpOverlay');
+  ov.style.display='block';
+  applyVideoOpacity();
+  toast('动态壁纸已设置','success');
+}
+function applyVideoOpacity(){
+  var v=document.getElementById('wpVideo');
+  if(v.style.display==='none')return;
+  var op=document.getElementById('wpOp').value;
+  document.getElementById('wpOpVal').textContent=op+'%';
+  var ov=document.getElementById('wpOverlay');
+  ov.style.background='rgba(20,25,35,'+(op/100)+')';
+}
+function setGradientDir(dir){
+  document.body.style.background='linear-gradient('+dir+',var(--bg1),var(--bg2))';
+  wpUrl=null;
+  document.getElementById('wpVideo').style.display='none';
+  document.getElementById('wpOverlay').style.display='none';
+  stopStars();
+  try{localStorage.setItem('wpdir',dir)}catch(e){}
+  toast('渐变方向: '+dir,'info');
+}
+function clearWallpaper(){
+  wpUrl=null;
+  stopStars();
+  document.body.style.background='';
+  var v=document.getElementById('wpVideo');
+  v.style.display='none';v.src='';
+  document.getElementById('wpOverlay').style.display='none';
+  try{localStorage.removeItem('wp')}catch(e){}
+  toast('壁纸已清除','info');
+}
+var _vListOpen=true;
+function toggleVersionList(){
+  _vListOpen=!_vListOpen;
+  var v=document.getElementById('versionList');
+  if(v){v.style.display=_vListOpen?'block':'none'}
+  var b=document.getElementById('collapseBtn');
+  if(b)b.textContent=_vListOpen?'📂':'📁';
+}
+try{
+    wpUrl=localStorage.getItem('wp');
+    if(wpUrl){
+      var op=localStorage.getItem('wpOp')||'40';
+      document.getElementById('wpOp').value=op;
+      document.getElementById('wpOpVal').textContent=op+'%';
+      setTimeout(function(){
+        document.body.style.background='linear-gradient(rgba(20,25,35,'+(op/100)+'),rgba(20,25,35,'+(op/100)+')),url('+wpUrl+') center/cover no-repeat fixed';
+      },800);
+    }
+  }catch(e){}
+try{var d=localStorage.getItem('wpdir');if(d)document.body.style.background='linear-gradient('+d+',var(--bg1),var(--bg2))'}catch(e){}
+
+
+var _notes=[];
+try{_notes=JSON.parse(localStorage.getItem('launcher_notes')||'[]')}catch(e){_notes=[]}
+var _editingNoteIdx=-1;
+function renderNotes(){
+  var box=document.getElementById('noteList');
+  if(!box)return;
+  if(!_notes.length){box.innerHTML='<div style="color:#555;font-size:13px;padding:10px;text-align:center">还没有笔记，点上面➕新建</div>';return}
+  box.innerHTML='';
+  _notes.forEach(function(note,i){
+    var div=document.createElement('div');
+    div.style.cssText='background:#0f1115;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer';
+    var title=document.createElement('div');
+    title.style.cssText='display:flex;justify-content:space-between;align-items:center';
+    var t=document.createElement('span');
+    t.style.color='#2ecc71';t.style.fontWeight='600';t.textContent=note.title;
+    var btns=document.createElement('div');
+    var editBtn=document.createElement('button');
+    editBtn.className='small-btn';editBtn.style.marginRight='4px';editBtn.textContent='✏️';
+    editBtn.onclick=function(e){e.stopPropagation();editNote(i)};
+    var delBtn=document.createElement('button');
+    delBtn.className='small-btn';delBtn.style.color='#ef4444';delBtn.textContent='🗑️';
+    delBtn.onclick=function(e){e.stopPropagation();delNote(i)};
+    btns.appendChild(editBtn);btns.appendChild(delBtn);
+    title.appendChild(t);title.appendChild(btns);
+    var body=document.createElement('div');
+    body.style.cssText='color:#888;font-size:12px;margin-top:6px;white-space:pre-wrap;max-height:60px;overflow:hidden';
+    body.textContent=note.content.substring(0,100);
+    div.appendChild(title);div.appendChild(body);
+    div.onclick=function(){editNote(i)};
+    box.appendChild(div);
+  });
+}
+function newNote(){_editingNoteIdx=-1;document.getElementById('noteTitle').value='';document.getElementById('noteContent').value='';document.getElementById('noteEditor').style.display='block'}
+function editNote(i){_editingNoteIdx=i;document.getElementById('noteTitle').value=_notes[i].title;document.getElementById('noteContent').value=_notes[i].content;document.getElementById('noteEditor').style.display='block'}
+function delNote(i){if(confirm('删除这条笔记？')){_notes.splice(i,1);localStorage.setItem('launcher_notes',JSON.stringify(_notes));renderNotes();
+
+(function(){
+  var bar=document.getElementById('notesDragBar');
+  var modal=document.getElementById('notesModal');
+  if(!bar||!modal)return;
+  var dragging=false,dx=0,dy=0;
+  bar.onmousedown=function(e){
+    dragging=true;
+    var r=modal.getBoundingClientRect();
+    dx=e.clientX-r.left;dy=e.clientY-r.top;
+    modal.style.transform='none';
+    modal.style.left=r.left+'px';modal.style.top=r.top+'px';
+    e.preventDefault();
+  };
+  document.onmousemove=function(e){
+    if(!dragging)return;
+    modal.style.left=(e.clientX-dx)+'px';
+    modal.style.top=(e.clientY-dy)+'px';
+  };
+  document.onmouseup=function(){dragging=false};
+})();
+toast('已删除','info')}}
+function saveNote(){
+  var title=document.getElementById('noteTitle').value.trim()||'未命名';
+  var content=document.getElementById('noteContent').value;
+  if(_editingNoteIdx>=0){_notes[_editingNoteIdx].title=title;_notes[_editingNoteIdx].content=content}
+  else{_notes.push({title:title,content:content})}
+  localStorage.setItem('launcher_notes',JSON.stringify(_notes));
+  document.getElementById('noteEditor').style.display='none';
+  renderNotes();
+
+(function(){
+  var bar=document.getElementById('notesDragBar');
+  var modal=document.getElementById('notesModal');
+  if(!bar||!modal)return;
+  var dragging=false,dx=0,dy=0;
+  bar.onmousedown=function(e){
+    dragging=true;
+    var r=modal.getBoundingClientRect();
+    dx=e.clientX-r.left;dy=e.clientY-r.top;
+    modal.style.transform='none';
+    modal.style.left=r.left+'px';modal.style.top=r.top+'px';
+    e.preventDefault();
+  };
+  document.onmousemove=function(e){
+    if(!dragging)return;
+    modal.style.left=(e.clientX-dx)+'px';
+    modal.style.top=(e.clientY-dy)+'px';
+  };
+  document.onmouseup=function(){dragging=false};
+})();
+
+  toast('笔记已保存','success');
+}
+function closeNoteEditor(){document.getElementById('noteEditor').style.display='none'}
+renderNotes();
+
+(function(){
+  var bar=document.getElementById('notesDragBar');
+  var modal=document.getElementById('notesModal');
+  if(!bar||!modal)return;
+  var dragging=false,dx=0,dy=0;
+  bar.onmousedown=function(e){
+    dragging=true;
+    var r=modal.getBoundingClientRect();
+    dx=e.clientX-r.left;dy=e.clientY-r.top;
+    modal.style.transform='none';
+    modal.style.left=r.left+'px';modal.style.top=r.top+'px';
+    e.preventDefault();
+  };
+  document.onmousemove=function(e){
+    if(!dragging)return;
+    modal.style.left=(e.clientX-dx)+'px';
+    modal.style.top=(e.clientY-dy)+'px';
+  };
+  document.onmouseup=function(){dragging=false};
+})();
+
+function showRabbitMenu(e){
+  e.preventDefault();
+  var m=document.getElementById('rabbitMenu');
+  m.style.display='block';
+  m.style.left=e.clientX+'px';
+  m.style.top=e.clientY+'px';
+  setTimeout(function(){document.addEventListener('click',function h(){m.style.display='none';document.removeEventListener('click',h)})},10);
+}
+function viewNotes(){
+  document.getElementById('rabbitMenu').style.display='none';
+  document.getElementById('notesModal').style.display='flex';
+  renderNotes();
+
+(function(){
+  var bar=document.getElementById('notesDragBar');
+  var modal=document.getElementById('notesModal');
+  if(!bar||!modal)return;
+  var dragging=false,dx=0,dy=0;
+  bar.onmousedown=function(e){
+    dragging=true;
+    var r=modal.getBoundingClientRect();
+    dx=e.clientX-r.left;dy=e.clientY-r.top;
+    modal.style.transform='none';
+    modal.style.left=r.left+'px';modal.style.top=r.top+'px';
+    e.preventDefault();
+  };
+  document.onmousemove=function(e){
+    if(!dragging)return;
+    modal.style.left=(e.clientX-dx)+'px';
+    modal.style.top=(e.clientY-dy)+'px';
+  };
+  document.onmouseup=function(){dragging=false};
+})();
+
+}
+function closeNotes(){document.getElementById('notesModal').style.display='none'}
+function openNotepad(){
+  document.getElementById('rabbitMenu').style.display='none';
+  document.getElementById('notepadModal').style.display='flex';
+}
+function closeNotepad(){document.getElementById('notepadModal').style.display='none'}
+function newNotepad(){
+  document.getElementById('npFileName').value='';
+  document.getElementById('npContent').value='';
+}
+function saveNotepad(){
+  var name=document.getElementById('npFileName').value||'未命名.txt';
+  var content=document.getElementById('npContent').value;
+  var blob=new Blob([content],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=name.endsWith('.txt')?name:name+'.txt';
+  a.click();
+  toast('TXT已保存','success');
+}
+function openMCCommands(){
+  document.getElementById('rabbitMenu').style.display='none';
+  document.getElementById('mcCmdModal').style.display='flex';
+}
+function closeMCCommands(){document.getElementById('mcCmdModal').style.display='none'}
+
+/* ===== 兔言兔语（自定义台词管理） ===== */
+function loadCustomMsgs(){
+  try{return JSON.parse(localStorage.getItem('starrabbit_custom_msgs')||'[]')}
+  catch(e){return[]}
+}
+function saveCustomMsgs(arr){
+  localStorage.setItem('starrabbit_custom_msgs',JSON.stringify(arr))
+}
+function openMsgsModal(){
+  document.getElementById('rabbitMenu').style.display='none';
+  document.getElementById('msgsModal').style.display='flex';
+  renderMsgsList();
+  renderEmojiGrid();
+  updateMsgsCounts();
+}
+function closeMsgsModal(){document.getElementById('msgsModal').style.display='none'}
+function updateMsgsCounts(){
+  const msgs=loadCustomMsgs(),emojis=loadEmojis();
+  document.getElementById('textCount').innerText='('+msgs.length+')';
+  document.getElementById('emojiCount').innerText='('+emojis.length+')';
+  const tc=document.getElementById('msgsCount');if(tc)tc.innerText='（共 '+msgs.length+' 条）';
+}
+function switchMsgsTab(tab){
+  const textPanel=document.getElementById('textPanel'),emojiPanel=document.getElementById('emojiPanel');
+  const tabText=document.getElementById('tabText'),tabEmoji=document.getElementById('tabEmoji');
+  if(tab==='emoji'){
+    textPanel.style.display='none';emojiPanel.style.display='block';
+    tabText.style.background='rgba(255,255,255,.05)';tabText.style.color='#aaa';tabText.style.borderColor='rgba(255,255,255,.1)';
+    tabEmoji.style.background='var(--accent)';tabEmoji.style.color='#fff';tabEmoji.style.borderColor='transparent';
+  }else{
+    textPanel.style.display='block';emojiPanel.style.display='none';
+    tabEmoji.style.background='rgba(255,255,255,.05)';tabEmoji.style.color='#aaa';tabEmoji.style.borderColor='rgba(255,255,255,.1)';
+    tabText.style.background='var(--accent)';tabText.style.color='#fff';tabText.style.borderColor='transparent';
+  }
+}
+function renderMsgsList(){
+  const list=document.getElementById('msgsList');
+  const arr=loadCustomMsgs();
+  if(!arr.length){
+    list.innerHTML='<div class="empty">还没有自定义台词，在下面输入框添加一句吧~</div>';
+    return;
+  }
+  list.innerHTML='';
+  arr.forEach((m,i)=>{
+    const row=document.createElement('div');
+    row.className='msg-item';
+    row.innerHTML='<span style="flex:1;word-break:break-all">'+escapeHtml(m)+'</span><span class="del" title="删除此句" onclick="delCustomMsg('+i+')">✕</span>';
+    list.appendChild(row);
+  });
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function addCustomMsg(){
+  const inp=document.getElementById('newMsgInput');
+  const v=inp.value.trim();
+  if(!v){toast('请先输入一句话','warning');return}
+  const arr=loadCustomMsgs();
+  if(arr.includes(v)){toast('这句话已经在列表里了','warning');return}
+  arr.push(v);
+  saveCustomMsgs(arr);
+  inp.value='';
+  renderMsgsList();
+  toast('已添加：'+v,'success');
+}
+function delCustomMsg(i){
+  const arr=loadCustomMsgs();
+  const removed=arr.splice(i,1)[0];
+  saveCustomMsgs(arr);
+  renderMsgsList();
+  toast('已删除：'+(removed||''),'info');
+}
+function clearCustomMsgs(){
+  if(!loadCustomMsgs().length){toast('列表已经是空的','info');return}
+  if(!confirm('确定清空全部自定义台词？此操作不可恢复。'))return;
+  saveCustomMsgs([]);
+  renderMsgsList();
+  toast('已清空全部自定义台词','success');
+}
+function importMsgsBatch(){
+  const text=prompt('请粘贴要批量导入的台词（每行一句）：');
+  if(text===null)return;
+  const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){toast('没有可导入的内容','warning');return}
+  const arr=loadCustomMsgs();
+  let added=0;
+  lines.forEach(l=>{if(!arr.includes(l)){arr.push(l);added++}});
+  saveCustomMsgs(arr);
+  renderMsgsList();
+  toast('批量导入完成，新增 '+added+' 条','success');
+}
+
+/* ===== 表情包管理 ===== */
+function loadEmojis(){
+  try{return JSON.parse(localStorage.getItem('starrabbit_emojis')||'[]')}
+  catch(e){return[]}
+}
+function saveEmojis(arr){
+  // 控制总大小：超过 ~4MB 就提示
+  let total=0;
+  arr.forEach(e=>{total+=(e.dataUrl||'').length});
+  if(total>4*1024*1024){toast('表情包总量过大（>4MB），部分图片可能无法保存','warning')}
+  localStorage.setItem('starrabbit_emojis',JSON.stringify(arr));
+}
+function renderEmojiGrid(){
+  const grid=document.getElementById('emojiGrid');
+  if(!grid)return;
+  const emojis=loadEmojis();
+  if(!emojis.length){
+    grid.innerHTML='<div style="grid-column:1/-1;color:#555;text-align:center;padding:24px;font-size:13px">还没有表情包，把 GIF / PNG 拖到上方虚线框里吧~</div>';
+    return;
+  }
+  grid.innerHTML='';
+  emojis.forEach((em,i)=>{
+    const cell=document.createElement('div');
+    cell.style.cssText='position:relative;aspect-ratio:1;background:#0f1115;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer';
+    cell.innerHTML='<img src="'+em.dataUrl+'" style="max-width:100%;max-height:100%;object-fit:contain" draggable="false" title="'+escapeHtml(em.name||'')+'">'+
+      '<div style="position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(239,68,68,.9);color:#fff;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:12px;cursor:pointer" onmouseover="this.style.display=\'flex\'" onmouseout="this.style.display=\'none\'" onclick="delEmoji('+i+')">✕</div>';
+    cell.onmouseenter=()=>{cell.querySelector('div').style.display='flex'};
+    cell.onmouseleave=()=>{cell.querySelector('div').style.display='none'};
+    // 点一下预览：在兔子气泡里发出来
+    cell.onclick=()=>{rabbitSay(em)};
+    grid.appendChild(cell);
+  });
+  updateMsgsCounts();
+}
+function pickEmojiFile(){
+  document.getElementById('emojiFile').value='';
+  document.getElementById('emojiFile').click();
+}
+function onEmojiFilePicked(e){
+  const files=Array.from(e.target.files||[]);
+  files.forEach(f=>addEmojiFile(f));
+}
+function handleEmojiDrop(e){
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.style.background='';
+  const files=Array.from(e.dataTransfer.files||[]);
+  if(!files.length)return;
+  files.forEach(f=>addEmojiFile(f));
+}
+function addEmojiFile(file){
+  if(!file)return;
+  const ext=(file.name||'').toLowerCase().split('.').pop();
+  if(!['png','jpg','jpeg','gif','webp','bmp'].includes(ext)){
+    toast('不支持的格式：'+file.name+'（仅图片）','error');return;
+  }
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const arr=loadEmojis();
+    arr.push({dataUrl:reader.result,name:file.name});
+    saveEmojis(arr);
+    renderEmojiGrid();
+    toast('已添加表情包：'+file.name,'success');
+    // 刚加的立刻在兔子气泡里展示一下
+    rabbitSay({dataUrl:reader.result,name:file.name});
+  };
+  reader.onerror=()=>toast('读取失败：'+file.name,'error');
+  reader.readAsDataURL(file);
+}
+function delEmoji(i){
+  const arr=loadEmojis();
+  if(!arr[i])return;
+  const name=arr[i].name||('表情包#'+(i+1));
+  arr.splice(i,1);
+  saveEmojis(arr);
+  renderEmojiGrid();
+  toast('已删除：'+name,'info');
+}
+function clearEmojis(){
+  if(!loadEmojis().length){toast('表情包列表已经是空的','info');return}
+  if(!confirm('确定清空全部表情包？此操作不可恢复。'))return;
+  saveEmojis([]);
+  renderEmojiGrid();
+  toast('已清空全部表情包','success');
+}
+
+/* ===== 换肤系统 ===== */
+const PET_IMG_EXT=['png','jpg','jpeg','gif','webp','bmp'];
+const PET_LIVE2D_EXT=['model.json','model3.json','moc3','moc'];
+const PET_3D_EXT=['glb','gltf'];
+function openPetSkinModal(){
+  document.getElementById('rabbitMenu').style.display='none';
+  document.getElementById('skinModal').style.display='flex';
+  renderCurrentSkinInfo();
+}
+function closePetSkinModal(){document.getElementById('skinModal').style.display='none'}
+function loadSavedPetSkin(){
+  try{return JSON.parse(localStorage.getItem('starrabbit_pet_skin')||'null')}
+  catch(e){return null}
+}
+function savePetSkin(skin){
+  if(skin){localStorage.setItem('starrabbit_pet_skin',JSON.stringify(skin))}
+  else{localStorage.removeItem('starrabbit_pet_skin')}
+}
+function renderCurrentSkinInfo(){
+  const s=loadSavedPetSkin();
+  const el=document.getElementById('currentSkinInfo');
+  if(!s){el.innerHTML='当前皮肤：<b style="color:#2ecc71">默认 SVG 兔子</b>'}
+  else if(s.type==='image'){el.innerHTML='当前皮肤：<b style="color:#7aa5ff">🖼️ 图片</b> · '+escapeHtml(s.name||'自定义图片')}
+  else if(s.type==='live2d'){el.innerHTML='当前皮肤：<b style="color:#f78fb3">🎭 Live2D</b> · '+escapeHtml(s.name||'')+'<br><span style="color:#888;font-size:11px">'+escapeHtml(s.path||'')+'</span>'}
+  else if(s.type==='3d'){el.innerHTML='当前皮肤：<b style="color:#a29bfe">🧊 3D 模型</b> · '+escapeHtml(s.name||'')+'<br><span style="color:#888;font-size:11px">'+escapeHtml(s.path||'')+'</span>'}
+  else{el.innerHTML='当前皮肤：<b style="color:#2ecc71">默认 SVG 兔子</b>'}
+}
+function pickPetImage(){
+  const inp=document.getElementById('petSkinFile');
+  inp.setAttribute('accept','image/png,image/jpeg,image/gif,image/webp,image/bmp');
+  inp._mode='image';
+  inp.value='';
+  inp.click();
+}
+function pickLive2D(){
+  const inp=document.getElementById('petSkinFile');
+  inp.setAttribute('accept','.model.json,.model3.json,.moc3,.moc');
+  inp._mode='live2d';
+  inp.value='';
+  inp.click();
+}
+function pick3DSkin(){
+  const inp=document.getElementById('petSkinFile');
+  inp.setAttribute('accept','.glb,.gltf');
+  inp._mode='3d';
+  inp.value='';
+  inp.click();
+}
+function onPetSkinPicked(e){
+  const f=e.target.files&&e.target.files[0];
+  if(!f)return;
+  applyPetFile(f);
+}
+function classifyByName(name){
+  const n=(name||'').toLowerCase();
+  for(const ext of PET_LIVE2D_EXT){if(n.endsWith('.'+ext))return 'live2d'}
+  for(const ext of PET_3D_EXT){if(n.endsWith('.'+ext))return '3d'}
+  const dot=n.lastIndexOf('.');
+  const ext=dot>=0?n.slice(dot+1):'';
+  if(PET_IMG_EXT.includes(ext))return 'image';
+  return 'unknown';
+}
+function applyPetFile(file){
+  const name=file.name||'';
+  const type=classifyByName(name);
+  if(type==='unknown'){toast('不支持的文件格式：'+name,'error');return}
+  if(type==='image'){
+    const reader=new FileReader();
+    reader.onload=()=>{
+      applyPetSkin({type:'image',name:name,dataUrl:reader.result});
+      toast('已换上图片皮肤','success');
+      rabbitSay('哇！新皮肤好看吗~');
+    };
+    reader.onerror=()=>toast('图片读取失败','error');
+    reader.readAsDataURL(file);
+  }else{
+    // Live2D / 3D：存路径（Electron 拖入或选择文件对象带 path）
+    const p=file.path||name;
+    applyPetSkin({type:type,name:name,path:p});
+    toast('已挂载：'+name,'success');
+    rabbitSay(type==='live2d'?'🎭 Live2D 模型已就位！':'🧊 3D 模型已挂载！');
+  }
+}
+function applyPetSkin(skin){
+  const host=document.getElementById('rabbitSkinHost');
+  if(!host)return;
+  host.innerHTML='';
+  if(!skin||skin.type==='default'){
+    host.innerHTML='<svg viewBox="0 0 100 120" width="65" height="78" id="rabbitSvg"><ellipse cx="35" cy="18" rx="8" ry="22" fill="#fff" stroke="#666" stroke-width="1.5"/><ellipse cx="35" cy="20" rx="4" ry="16" fill="#ffc0cb"/><ellipse cx="65" cy="18" rx="8" ry="22" fill="#fff" stroke="#666" stroke-width="1.5"/><ellipse cx="65" cy="20" rx="4" ry="16" fill="#ffc0cb"/><ellipse cx="50" cy="60" rx="30" ry="28" fill="#fff" stroke="#666" stroke-width="1.5"/><circle cx="38" cy="55" r="4" fill="#333"/><circle cx="62" cy="55" r="4" fill="#333"/><ellipse cx="50" cy="65" rx="4" ry="3" fill="#ff9eb5"/><path d="M50 68 L50 72" stroke="#666" stroke-width="1.2"/><path d="M44 72 Q47 75 50 73" stroke="#666" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M56 72 Q53 75 50 73" stroke="#666" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>';
+    savePetSkin(null);
+  }else if(skin.type==='image'){
+    const img=document.createElement('img');
+    img.src=skin.dataUrl;
+    img.alt=skin.name||'pet skin';
+    img.draggable=false;
+    img.style.width='65px';img.style.height='78px';
+    img.style.objectFit='contain';
+    img.style.pointerEvents='none';
+    img.onerror=()=>toast('图片加载失败','error');
+    host.appendChild(img);
+    savePetSkin(skin);
+  }else if(skin.type==='live2d'||skin.type==='3d'){
+    // 挂载占位卡片：后续接入 Live2D Cubism SDK / three.js GLTFLoader 即可在此渲染
+    const card=document.createElement('div');
+    card.className='pet-model-card';
+    card.innerHTML=(skin.type==='live2d'?'🎭':'🧊')+'<small title="'+escapeHtml(skin.name||'')+'">'+escapeHtml(skin.name||'模型')+'</small>';
+    card.style.cursor='pointer';
+    card.title=(skin.type==='live2d'?'Live2D 模型':'3D 模型')+'\n'+(skin.path||'');
+    host.appendChild(card);
+    savePetSkin(skin);
+  }
+  renderCurrentSkinInfo();
+}
+function restoreDefaultSkin(){
+  applyPetSkin(null);
+  closePetSkinModal();
+  toast('已恢复默认兔子','success');
+  rabbitSay('又变回原来的样子啦~');
+}
+function hidePet(){
+  document.getElementById('rabbitMenu').style.display='none';
+  document.getElementById('rabbit').style.display='none';
+  document.getElementById('petRestoreBtn').style.display='flex';
+  // 顺便关掉气泡
+  document.getElementById('rabbitChat').classList.remove('show');
+  document.getElementById('rabbitEmoji').classList.remove('show');
+}
+function showPet(){
+  document.getElementById('petRestoreBtn').style.display='none';
+  document.getElementById('rabbit').style.display='block';
+  rabbitSay('我回来啦~');
+}
+function setPetScale(percent){
+  const r=document.getElementById('rabbit');
+  const s=parseInt(percent)||100;
+  r.style.setProperty('--pet-scale',s/100);
+  document.getElementById('petScaleLabel').innerText=s+'%';
+  localStorage.setItem('starrabbit_pet_scale',String(s));
+  positionFood();
+}
+function loadPetScale(){
+  let s=100;
+  try{s=parseInt(localStorage.getItem('starrabbit_pet_scale'))||100}catch(e){}
+  const slider=document.getElementById('petScaleSlider');
+  if(slider){slider.value=s;document.getElementById('petScaleLabel').innerText=s+'%'}
+  const r=document.getElementById('rabbit');
+  if(r)r.style.setProperty('--pet-scale',s/100);
+}
+function handlePetDrop(e){
+  e.preventDefault();
+  const r=document.getElementById('rabbit');
+  r.classList.remove('drag-over');
+  const f=e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(!f){toast('没有检测到文件','warning');return}
+  applyPetFile(f);
+}
+</script>
+<!-- ===== 3D 皮肤预览（skinview3d，LittleSkin同款） ===== -->
+<script src="https://unpkg.com/skinview3d@3.4.2/bundles/skinview3d.bundle.js"></script>
+<script>
+/* ===== 3D 皮肤预览（skinview3d，与LittleSkin同款渲染）===== */
+let _sv=null,_svModel='steve',_svAction=0;
+
+function _svInit(){
+  if(_sv)return;
+  const stage=document.getElementById('skin3dStage');
+  const w=stage.clientWidth||800,h=stage.clientHeight||600;
+  // 创建canvas元素
+  const canvas=document.createElement('canvas');
+  stage.appendChild(canvas);
+  _sv=new skinview3d.SkinViewer({
+    canvas:canvas,
+    width:w,height:h,
+  });
+  _sv.autoRotate=true;_sv.autoRotateSpeed=1.5;
+  _sv.zoom=0.8;
+  window.addEventListener('resize',()=>{
+    if(_sv){const s=document.getElementById('skin3dStage');_sv.setSize(s.clientWidth,s.clientHeight)}
+  });
+}
+
+function _svApply(){
+  if(!_sv)return;
+  if(skinImgUrl){
+    _sv.loadSkin(skinImgUrl,{model:_svModel}).then(()=>{
+      const el=document.getElementById('skin3dRes');
+      if(el)el.textContent='已加载';
+    }).catch(()=>{
+      const el=document.getElementById('skin3dRes');
+      if(el)el.textContent='加载失败';
+    });
+  }
+}
+
+var _whiteSkinUrl='';
+function _getWhiteSkin(){
+  if(_whiteSkinUrl)return _whiteSkinUrl;
+  var c=document.createElement('canvas');c.width=64;c.height=64;
+  var x=c.getContext('2d');x.fillStyle='#ffffff';x.fillRect(0,0,64,64);
+  _whiteSkinUrl=c.toDataURL();return _whiteSkinUrl;
+}
+function set3dModel(m,force){
+  _svModel=m;
+  document.getElementById('m3Steve').classList.toggle('active',m==='steve');
+  document.getElementById('m3Alex').classList.toggle('active',m==='alex');
+  if(!_sv)return;
+  var svModel=(m==='alex')?'slim':'default';
+  var url=skinImgUrl||_getWhiteSkin();
+  _sv.loadSkin(url,{model:svModel}).catch(()=>{});
+}
+
+function set3dAuto(on){
+  if(_sv)_sv.autoRotate=on;
+  document.getElementById('auto3dBtn').classList.toggle('active',on);
+  document.getElementById('auto3dBtn').textContent=on?'⏸ 停止旋转':'▶ 自动旋转';
+}
+function toggle3dAuto(){set3dAuto(!(_sv?_sv.autoRotate:true))}
+
+function set3dAction(a){
+  _svAction=a;
+  document.getElementById('actIdle').classList.toggle('active',a===0);
+  document.getElementById('actWalk').classList.toggle('active',a===1);
+  if(!_sv)return;
+  try{
+    if(a===1){
+      if(!_sv._walkAnim)_sv._walkAnim=new skinview3d.WalkingAnimation();
+      _sv.animation=_sv._walkAnim;
+      _sv._walkAnim.speed=1;
+    }else{
+      _sv.animation=null;
+    }
+  }catch(e){console.warn('动画不支持:',e)}
+}
+
+function reset3dView(){
+  if(!_sv)return;
+  _sv.controls.resetRotation();
+  _sv.controls.resetZoom();
+  _sv.controls.resetPan();
+}
+
+function open3dSkin(){
+  document.getElementById('skin3d').classList.add('open');
+  setTimeout(()=>{
+    _svInit();
+    const t=document.querySelector('input[name=skinType]:checked');
+    set3dModel((t&&t.value==='alex')?'alex':'steve',true);
+    if(skinImgUrl){
+      _svApply();
+    }else{
+      // 没有自定义皮肤时加载默认Steve
+      _sv.loadSkin(_getWhiteSkin(),{model:_svModel}).catch(()=>{});
+    }
+    set3dAuto(true);
+    set3dAction(0);
+    const s=document.getElementById('skin3dStage');
+    if(_sv)_sv.setSize(s.clientWidth,s.clientHeight);
+  },50);
+}
+function close3dSkin(){document.getElementById('skin3d').classList.remove('open','observing')}
+function saveAndClose(){
+  if(skinImgUrl){
+    drawAvatar(skinImgUrl);
+    try{ipcRenderer.invoke('save-skin',skinImgUrl)}catch(e){}
+    try{localStorage.setItem('starrabbit_skin',skinImgUrl)}catch(e){}
+    toast('皮肤已保存，主页头像和游戏将使用此皮肤','success');
+  }else{
+    drawAvatar(null);
+    try{ipcRenderer.invoke('clear-skin')}catch(e){}
+    try{localStorage.removeItem('starrabbit_skin')}catch(e){}
+    toast('已恢复默认皮肤','info');
+  }
+  close3dSkin();
+}
+function enterObserve(){document.getElementById('skin3d').classList.add('observing')}
+function exitObserve(){document.getElementById('skin3d').classList.remove('observing')}
+function resetAllSkin(){
+  skinImgUrl='';
+  // 生成纯白色皮肤
+  const c=document.createElement('canvas');c.width=64;c.height=64;
+  const x=c.getContext('2d');x.fillStyle='#ffffff';x.fillRect(0,0,64,64);
+  const whiteUrl=c.toDataURL();
+  if(_sv){_sv.loadSkin(whiteUrl,{model:_svModel}).catch(()=>{});_sv.loadCape(null);}
+  _s3_setCapeStatus('未加载');
+  document.getElementById('skin3dRes').textContent='白色';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('skin3d').classList.contains('observing')){exitObserve()}});
+
+/* ===== 披风 ===== */
+function _s3_setCapeStatus(t){const el=document.getElementById('capeStatus');if(!el)return;el.textContent='披风:'+(t||'未加载')}
+function pickCape(){document.getElementById('capeFile').click()}
+function onCapeFile(e){
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{if(_sv)_sv.loadCape(rd.result).then(()=>_s3_setCapeStatus('已加载')).catch(()=>_s3_setCapeStatus('加载失败'))};
+  rd.readAsDataURL(f);
+  e.target.value='';
+}
+function loadCapeUrl(){
+  const u=prompt('输入披风图片URL：');if(!u||!u.trim())return;
+  if(_sv)_sv.loadCape(u.trim()).then(()=>_s3_setCapeStatus('已加载')).catch(()=>_s3_setCapeStatus('加载失败'));
+}
+function clearCape(){
+  if(_sv)_sv.loadCape(null);
+  _s3_setCapeStatus('未加载');
+}
+
+/* ===== 皮肤文件选择 ===== */
+function pickSkinFile(){document.getElementById('skinFile').click()}
+function onSkinFile(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.type!=='image/png' && !f.name.toLowerCase().endsWith('.png')){
+    alert('请选择 PNG 格式的皮肤图片！当前文件：'+f.name);
+    e.target.value='';return;
+  }
+  const rd=new FileReader();
+  rd.onload=()=>{skinImgUrl=rd.result;_svApply()};
+  rd.readAsDataURL(f);
+  e.target.value='';
+}
+function loadSkinUrl(){
+  const u=prompt('输入皮肤PNG图片URL：');if(!u||!u.trim())return;
+  skinImgUrl=u.trim();_svApply();
+}
+
+/* ===== 拖拽图片导入 ===== */
+(function(){
+  const stage=document.getElementById('skin3d');
+  if(!stage)return;
+  stage.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();stage.style.outline='2px dashed #4a9eff';});
+  stage.addEventListener('dragleave',e=>{e.preventDefault();stage.style.outline='';});
+  stage.addEventListener('drop',e=>{
+    e.preventDefault();e.stopPropagation();stage.style.outline='';
+    const f=e.dataTransfer.files[0];
+    if(!f)return;
+    if(f.type!=='image/png' && !f.name.toLowerCase().endsWith('.png')){
+      alert('请拖入 PNG 格式的皮肤图片！当前文件：'+f.name);
+      return;
+    }
+    const rd=new FileReader();
+    rd.onload=()=>{skinImgUrl=rd.result;_svApply()};
+    rd.readAsDataURL(f);
+  });
+})();
+</script>
+
+<!-- 兔子右键菜单 -->
+<div id="rabbitMenu" style="display:none;position:fixed;z-index:9999;background:#1a1d24;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:180px">
+  <div style="padding:10px 14px;cursor:pointer;border-radius:6px;color:#e0e0e0;font-size:14px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''" onclick="openNotepad()">📝 写新笔记</div>
+  <div style="padding:10px 14px;cursor:pointer;border-radius:6px;color:#e0e0e0;font-size:14px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''" onclick="viewNotes()">📋 我的笔记</div>
+  <div style="padding:10px 14px;cursor:pointer;border-radius:6px;color:#e0e0e0;font-size:14px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''" onclick="openMCCommands()">⛏️ MC指令大全</div>
+  <div style="height:1px;background:rgba(255,255,255,.1);margin:4px 0"></div>
+  <div style="padding:10px 14px;cursor:pointer;border-radius:6px;color:#e0e0e0;font-size:14px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''" onclick="openMsgsModal()">💬 兔言兔语管理</div>
+  <div style="padding:10px 14px;cursor:pointer;border-radius:6px;color:#e0e0e0;font-size:14px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''" onclick="openPetSkinModal()">🎨 更换皮肤</div>
+  <div style="padding:10px 14px;cursor:pointer;border-radius:6px;color:#e0e0e0;font-size:14px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''" onclick="hidePet()">🙈 隐藏宠物</div>
+</div>
+
+<!-- 隐藏宠物后的恢复按钮 -->
+<div id="petRestoreBtn" title="点击显示兔子" style="display:none;position:fixed;right:10px;bottom:60px;z-index:999;width:36px;height:36px;border-radius:50%;background:rgba(46,204,113,.85);color:#fff;align-items:center;justify-content:center;cursor:pointer;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.3)" onclick="showPet()">🐰</div>
+
+<!-- 兔言兔语管理 -->
+<div id="msgsModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+  <div style="background:#1a1d24;border-radius:14px;width:560px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:18px;font-weight:700;color:#e0e0e0">💬 兔言兔语管理</div>
+      <button onclick="closeMsgsModal()" style="background:rgba(239,68,68,.2);border:none;color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer">关闭</button>
+    </div>
+    <!-- Tab 切换 -->
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="tabText" onclick="switchMsgsTab('text')" style="flex:1;padding:8px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:var(--accent);color:#fff;font-weight:600">📝 文字台词 <span id="textCount" style="font-size:11px;opacity:.8"></span></button>
+      <button id="tabEmoji" onclick="switchMsgsTab('emoji')" style="flex:1;padding:8px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#aaa;font-weight:600">😊 表情包 <span id="emojiCount" style="font-size:11px;opacity:.8"></span></button>
+    </div>
+    <!-- 文字台词区 -->
+    <div id="textPanel">
+      <div class="msgs-list" id="msgsList"></div>
+      <div style="display:flex;gap:8px">
+        <input id="newMsgInput" placeholder="输入一句兔子会说的话，回车添加" style="flex:1;background:#0f1115;border:1px solid rgba(255,255,255,.1);color:#e0e0e0;padding:10px;border-radius:8px" onkeydown="if(event.key==='Enter')addCustomMsg()">
+        <button onclick="addCustomMsg()" style="background:linear-gradient(135deg,#2ecc71,#27ae60);border:none;color:#fff;padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600">➕ 添加</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="importMsgsBatch()" style="flex:1;padding:8px;background:rgba(122,165,255,.15);border:1px solid rgba(122,165,255,.3);color:#7aa5ff;border-radius:8px;cursor:pointer">📥 批量粘贴（每行一句）</button>
+        <button onclick="clearCustomMsgs()" style="padding:8px 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;cursor:pointer">🗑️ 清空全部</button>
+      </div>
+    </div>
+    <!-- 表情包区 -->
+    <div id="emojiPanel" style="display:none">
+      <div id="emojiDropZone" style="border:2px dashed rgba(46,204,113,.4);border-radius:10px;padding:18px;text-align:center;color:#888;font-size:13px;margin-bottom:10px;cursor:pointer"
+           ondragover="event.preventDefault();this.style.background='rgba(46,204,113,.1)'"
+           ondragleave="this.style.background=''"
+           ondrop="handleEmojiDrop(event)"
+           onclick="pickEmojiFile()">
+        🖼️ 把 GIF / PNG / JPG / WEBP 表情包<b style="color:#2ecc71">拖到这里</b>，或点我选择文件
+      </div>
+      <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;max-height:260px;overflow-y:auto;background:#0f1115;border-radius:8px;padding:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="clearEmojis()" style="flex:1;padding:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;cursor:pointer">🗑️ 清空表情包</button>
+      </div>
+      <input type="file" id="emojiFile" accept="image/png,image/gif,image/jpeg,image/webp,image/bmp" multiple style="display:none" onchange="onEmojiFilePicked(event)">
+    </div>
+    <div style="color:#666;font-size:11px;margin-top:10px;line-height:1.5">提示：添加的句子会和兔子自带台词一起随机播放；表情包约有 15% 概率在它主动搭话时弹出。</div>
+  </div>
+</div>
+
+<!-- 换肤面板 -->
+<div id="skinModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+  <div style="background:#1a1d24;border-radius:14px;width:480px;max-width:90vw;display:flex;flex-direction:column;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:18px;font-weight:700;color:#e0e0e0">🎨 更换兔子皮肤</div>
+      <button onclick="closePetSkinModal()" style="background:rgba(239,68,68,.2);border:none;color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer">关闭</button>
+    </div>
+    <div id="currentSkinInfo" style="background:#0f1115;border-radius:8px;padding:10px 12px;color:#aaa;font-size:12px;margin-bottom:12px"></div>
+    <div class="skin-option" onclick="pickPetImage()"><span class="icon">🖼️</span> 选择图片皮肤 <small>PNG / JPG / GIF / WEBP / BMP</small></div>
+    <div class="skin-option" onclick="pickLive2D()"><span class="icon">🎭</span> 挂载 Live2D 模型 <small>.model.json / .model3.json / .moc3</small></div>
+    <div class="skin-option" onclick="pick3DSkin()"><span class="icon">🧊</span> 挂载 3D 模型 <small>.glb / .gltf</small></div>
+    <div class="skin-option" onclick="restoreDefaultSkin()"><span class="icon">🐰</span> 恢复默认 SVG 兔子 <small>出厂造型</small></div>
+    <div style="background:#0f1115;border-radius:8px;padding:12px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="color:#e0e0e0;font-size:13px">🔍 兔子大小</span>
+        <span id="petScaleLabel" style="color:#2ecc71;font-size:13px;font-weight:600">100%</span>
+      </div>
+      <input type="range" id="petScaleSlider" min="20" max="500" value="100" step="5"
+             style="width:100%;accent-color:#2ecc71;cursor:pointer"
+             oninput="setPetScale(this.value)">
+      <div style="display:flex;justify-content:space-between;color:#666;font-size:11px;margin-top:4px"><span>小</span><span>大</span></div>
+    </div>
+    <div style="color:#888;font-size:12px;margin-top:10px;line-height:1.6;background:rgba(122,165,255,.08);padding:10px;border-radius:8px">
+      💡 小技巧：你也可以<b>直接把图片或模型文件拖到右下角的兔子身上</b>，松手即换肤，自动识别格式。
+    </div>
+    <input type="file" id="petSkinFile" style="display:none"
+           accept="image/png,image/jpeg,image/gif,image/webp,image/bmp,.model.json,.model3.json,.moc3,.glb,.gltf"
+           onchange="onPetSkinPicked(event)">
+  </div>
+</div>
+
+<!-- 记事本 -->
+<div id="notepadModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+  <div style="background:#1a1d24;border-radius:14px;width:600px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:18px;font-weight:700;color:#e0e0e0">📝 记事本</div>
+      <button onclick="closeNotepad()" style="background:rgba(239,68,68,.2);border:none;color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer">关闭</button>
+    </div>
+    <input id="npFileName" placeholder="文件名.txt" style="background:#0f1115;border:1px solid rgba(255,255,255,.1);color:#e0e0e0;padding:10px;border-radius:8px;margin-bottom:10px">
+    <textarea id="npContent" placeholder="在这里写内容..." style="flex:1;background:#0f1115;border:1px solid rgba(255,255,255,.1);color:#e0e0e0;padding:12px;border-radius:8px;resize:none;font-family:Consolas,monospace;font-size:14px;line-height:1.6"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="saveNotepad()" style="flex:1;background:linear-gradient(135deg,#2ecc71,#27ae60);border:none;color:#fff;padding:10px;border-radius:8px;cursor:pointer;font-weight:600">💾 保存TXT</button>
+      <button onclick="newNotepad()" style="padding:10px 20px;background:rgba(255,255,255,.1);border:none;color:#e0e0e0;border-radius:8px;cursor:pointer">📄 新建</button>
+    </div>
+  </div>
+</div>
+
+<!-- MC指令大全 -->
+<div id="mcCmdModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+  <div style="background:#1a1d24;border-radius:14px;width:700px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:18px;font-weight:700;color:#e0e0e0">⛏️ Minecraft 指令大全</div>
+      <button onclick="closeMCCommands()" style="background:rgba(239,68,68,.2);border:none;color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer">关闭</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding-right:8px">
+      <div style="background:#0f1115;border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="color:#2ecc71;font-weight:700;margin-bottom:4px">💬 常用指令</div>
+        <div style="color:#aaa;font-size:13px;line-height:1.8">
+          /gamemode 0 生存模式 | /gamemode 1 创造模式<br>
+          /gamemode 2 极限模式 | /gamemode 3 旁观模式<br>
+          /give @s diamond 64 给玩家64个钻石<br>
+          /tp @s x y z 传送到坐标<br>
+          /tp @p @s 传送到最近的玩家<br>
+          /time set day 设置白天 | /time set night 设置夜晚<br>
+          /weather clear 晴天 | /weather rain 下雨<br>
+          /heal @s 恢复满血 | /feed @s 恢复饱食度<br>
+          /kill @e[type=!player] 杀死所有生物<br>
+          /effect give @s speed 30 2 速度提升
+        </div>
+      </div>
+      <div style="background:#0f1115;border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="color:#3498db;font-weight:700;margin-bottom:4px">🏠 服务器/管理</div>
+        <div style="color:#aaa;font-size:13px;line-height:1.8">
+          /op 玩家名 给管理员权限<br>
+          /deop 玩家名 取消管理员<br>
+          /kick 玩家名 踢出服务器<br>
+          /ban 玩家名 封禁玩家<br>
+          /pardon 玩家名 解封玩家<br>
+          /whitelist on 开启白名单<br>
+          /whitelist add 玩家名 添加白名单<br>
+          /ban-ip IP地址 封禁IP
+        </div>
+      </div>
+      <div style="background:#0f1115;border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="color:#f39c12;font-weight:700;margin-bottom:4px">🧱 建筑/物品</div>
+        <div style="color:#aaa;font-size:13px;line-height:1.8">
+          /setblock x y z 方块名 放置方块<br>
+          /fill x1 y1 z1 x2 y2 z2 方块名 填充区域<br>
+          /clone x1 y1 z1 x2 y2 z2 x y z 复制建筑<br>
+          /summon 实体名 x y z 生成实体<br>
+          /setworldspawn 设置世界出生点<br>
+          /gamerule keepInventory true 死亡不掉落<br>
+          /gamerule doDaylightCycle false 锁定时间
+        </div>
+      </div>
+      <div style="background:#0f1115;border-radius:8px;padding:12px">
+        <div style="color:#e74c3c;font-weight:700;margin-bottom:4px">🎯 其他实用</div>
+        <div style="color:#aaa;font-size:13px;line-height:1.8">
+          /xp add @s 100 给100经验<br>
+          /enchant @s minecraft:sharpness 5 锋利V<br>
+          /at +天名 私聊玩家<br>
+          /spawnpoint @s 设置个人重生点<br>
+          /worldborder 大小 1000 设置世界边界<br>
+          /seed 查看种子<br>
+          /locate village 寻找最近的村庄
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 笔记弹窗 -->
+<div id="notesModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1a1d24;border-radius:14px;width:500px;max-width:90vw;max-height:75vh;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.5);resize:both;overflow:auto;min-width:300px;min-height:200px">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);cursor:move" id="notesDragBar">
+    <div style="font-size:16px;font-weight:700;color:#e0e0e0">📋 我的笔记</div>
+    <div style="display:flex;gap:6px">
+      <button class="small-btn" onclick="newNote()" style="background:rgba(46,204,113,.2);color:#2ecc71">➕ 新建</button>
+      <button class="small-btn" onclick="closeNotes()">✕</button>
+    </div>
+  </div>
+  <div id="noteList" style="flex:1;overflow-y:auto;padding:12px 18px"></div>
+  <div id="noteEditor" style="display:none;padding:12px 18px;border-top:1px solid rgba(255,255,255,.08)">
+    <input id="noteTitle" placeholder="笔记标题" style="width:100%;background:#0a0c10;border:1px solid rgba(255,255,255,.1);color:#e0e0e0;padding:10px;border-radius:6px;margin-bottom:8px">
+    <textarea id="noteContent" placeholder="写点什么..." style="width:100%;height:120px;background:#0a0c10;border:1px solid rgba(255,255,255,.1);color:#e0e0e0;border-radius:6px;padding:10px;font-family:Consolas,monospace;font-size:13px;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="small-btn" onclick="saveNote()" style="background:rgba(46,204,113,.2);color:#2ecc71">💾 保存</button>
+      <button class="small-btn" onclick="closeNoteEditor()">取消</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
